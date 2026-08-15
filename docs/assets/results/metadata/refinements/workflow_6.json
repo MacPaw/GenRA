@@ -1,0 +1,13 @@
+{
+    "workflow_name": "workflow_6",
+    "workflow_steps": [
+        {
+            "step_name": "step_0",
+            "step_prompt": "A barrel wobbles side to side, briefly squashing and stretching under tension. Then suddenly explodes outward, bursting apart into planks that scatter in different directions before falling on the ground."
+        },
+        {
+            "step_name": "step_1",
+            "step_prompt": "The barrel should stay on the ground for 2 seconds after it exploded. Then it should assemble back together from the pieces."
+        }
+    ]
+}

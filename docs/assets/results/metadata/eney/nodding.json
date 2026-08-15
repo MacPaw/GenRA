@@ -1,0 +1,10 @@
+{
+  "prompt": "The blob looks to the top left, as it is thinking. After that, it nods its head up and down as if it is nodding its head in agreement.",
+  "examples": ["eney_no_animation"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": false,
+  "first_try": true,
+  "no_examples": true
+}

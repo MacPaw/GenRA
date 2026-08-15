@@ -1,0 +1,13 @@
+{
+    "workflow_name": "workflow_8",
+    "workflow_steps": [
+        {
+            "step_name": "step_0",
+            "step_prompt": "A stork takes three steps forward in place, then stands calmly on one leg, bending the other and rising it fully up to its body. It then turns its head left and right, looking around, briefly flaps its wings, then settles back into its original pose."
+        },
+        {
+            "step_name": "step_1",
+            "step_prompt": "When raising the leg up, the lower part of the leg should be bent by another 60 degrees and hold still for a moment before lowering it down."
+        }
+    ]
+}

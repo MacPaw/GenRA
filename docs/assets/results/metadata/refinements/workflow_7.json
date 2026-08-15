@@ -1,0 +1,13 @@
+{
+    "workflow_name": "workflow_7",
+    "workflow_steps": [
+        {
+            "step_name": "step_0",
+            "step_prompt": "A propeller of a toy-airplane starts spinning slowly and smoothly accelerates to full speed. The plane rolls forward, accelerates, takes off immediately entering a smooth loop in the air, then descends and makes a gentle landing."
+        },
+        {
+            "step_name": "step_1",
+            "step_prompt": "Instead of stopping almost immediately, after landing, the airplane should keep rolling forward by inertia before coming to a complete stop. It also should spin down its propeller gradually."
+        }
+    ]
+}

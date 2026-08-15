@@ -1,0 +1,10 @@
+{
+  "prompt": "The blob hops upwards and then lands back on the ground.",
+  "examples": ["eney_no_animation"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": false,
+  "first_try": false,
+  "no_examples": true
+}

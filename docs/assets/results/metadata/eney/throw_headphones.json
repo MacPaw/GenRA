@@ -1,0 +1,10 @@
+{
+  "prompt": "Blob puts on the headphones; then, jumps upwards, throwing the headphones up into the air and catches them back on its body. After catching, the blob blinks with his right eye and idles for a moment.",
+  "examples": ["headphones", "thinking"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": false,
+  "first_try": false,
+  "no_examples": false
+}

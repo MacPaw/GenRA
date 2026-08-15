@@ -1,0 +1,151 @@
+{
+  "generic": [
+    {
+      "name": "airplane",
+      "video": "right_output_video_airplane.mp4",
+      "has_puppeteer": true
+    },
+    {
+      "name": "barrel",
+      "video": "front_output_video_barrel.mp4",
+      "has_puppeteer": true
+    },
+    {
+      "name": "eye_bat",
+      "video": "front_output_video_eye_bat.mp4",
+      "has_puppeteer": true
+    },
+    {
+      "name": "fish",
+      "video": "right_output_video_fish.mp4",
+      "has_puppeteer": true
+    },
+    {
+      "name": "magician",
+      "video": "front_output_video_magician.mp4",
+      "has_puppeteer": true
+    },
+    {
+      "name": "sprout",
+      "video": "right_output_video_sprout.mp4",
+      "has_puppeteer": true
+    },
+    {
+      "name": "stork",
+      "video": "right_output_video_stork.mp4",
+      "has_puppeteer": true
+    },
+    {
+      "name": "windmill",
+      "video": "front_output_video_windmill.mp4",
+      "has_puppeteer": true
+    }
+  ],
+  "additional_examples": [
+    {
+      "name": "backflip_headphones",
+      "video": "front_output_video_backflip_headphones.mp4"
+    },
+    {
+      "name": "bounce",
+      "video": "front_output_video_bounce.mp4"
+    },
+    {
+      "name": "coffee_jump",
+      "video": "front_output_video_coffee_jump.mp4"
+    },
+    {
+      "name": "coffee_roll",
+      "video": "front_output_video_coffee_roll.mp4"
+    },
+    {
+      "name": "double_spin_jump",
+      "video": "front_output_video_double_spin_jump.mp4"
+    },
+    {
+      "name": "hourglass",
+      "video": "front_output_video_hourglass.mp4"
+    },
+    {
+      "name": "jump_in_circle",
+      "video": "front_output_video_jump_in_circle.mp4"
+    },
+    {
+      "name": "land_on_head",
+      "video": "front_output_video_land_on_head.mp4"
+    },
+    {
+      "name": "look_around",
+      "video": "front_output_video_look_around.mp4"
+    },
+    {
+      "name": "nodding",
+      "video": "front_output_video_nodding.mp4"
+    },
+    {
+      "name": "screensaver",
+      "video": "front_output_video_screensaver.mp4"
+    },
+    {
+      "name": "shake_and_jump",
+      "video": "front_output_video_shake_and_jump.mp4"
+    },
+    {
+      "name": "somersault",
+      "video": "front_output_video_somersault.mp4"
+    },
+    {
+      "name": "surprised_jump",
+      "video": "front_output_video_surprised_jump.mp4"
+    },
+    {
+      "name": "throw_headphones",
+      "video": "front_output_video_throw_headphones.mp4"
+    }
+  ],
+  "refinements": [
+    {
+      "name": "workflow_5",
+      "steps": [
+        "front_output_video_step_0.mp4",
+        "front_output_video_step_1.mp4",
+        "front_output_video_step_2.mp4"
+      ]
+    },
+    {
+      "name": "workflow_6",
+      "steps": [
+        "front_output_video_step_0.mp4",
+        "front_output_video_step_1.mp4"
+      ]
+    },
+    {
+      "name": "workflow_7",
+      "steps": [
+        "front_output_video_step_0.mp4",
+        "front_output_video_step_1.mp4"
+      ]
+    },
+    {
+      "name": "workflow_8",
+      "steps": [
+        "front_output_video_step_0.mp4",
+        "front_output_video_step_1.mp4"
+      ]
+    },
+    {
+      "name": "workflow_2",
+      "steps": [
+        "front_output_video_step_0.mp4",
+        "front_output_video_step_1.mp4"
+      ]
+    },
+    {
+      "name": "workflow_3",
+      "steps": [
+        "front_output_video_step_0.mp4",
+        "front_output_video_step_1.mp4"
+      ]
+    }
+  ]
+}

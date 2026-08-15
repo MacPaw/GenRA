@@ -1,0 +1,10 @@
+{
+  "prompt": "The character jumps to the left, rotating around the z-axis in the air, and lands on its head with a slight damping effect. It then bobs up and jumps in the opposite direction, reversing the rotation along the same arc to land back in the original pose.",
+  "examples": ["double_spin_jump", "bounce"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": false,
+  "first_try": false,
+  "no_examples": false
+}

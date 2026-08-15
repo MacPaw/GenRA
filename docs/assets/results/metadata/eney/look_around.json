@@ -1,0 +1,10 @@
+{
+  "prompt": "Blob looks around",
+  "examples": ["look_around"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": false,
+  "first_try": true,
+  "no_examples": false
+}

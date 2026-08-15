@@ -1,0 +1,10 @@
+{
+  "prompt": "The blob rolls in frame from the left side (from about 2 meters away), and suddenly bumps into the wall, ending up in the center of the frame standing upright. After the bump, the blob looks to his left and slightly down (on the wall he bumped into), pauses for a pretty long moment, and happily jumps a few times. It then tilts its body to the right and blinks its left eye happily, as if encouraging the viewer to join in.",
+  "examples": ["double_spin_jump", "bounce", "blink_sequential_l_r", "conversation", "searching", "look_around"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": true,
+  "first_try": false,
+  "no_examples": false
+}
