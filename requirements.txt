@@ -1,0 +1,11 @@
+# Runtime dependencies derived from `pyproject.toml`
+# and the imports used under `src/`.
+colorlog>=6.9.0
+numpy>=2.2.5
+openai>=1.102.0
+dotenv>=0.9.9
+compact_json>=1.8.1
+usd-core>=25.11
+numba>=0.62.1
+Pillow>=11.0.0
+scipy>=1.10.1

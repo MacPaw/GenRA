@@ -1,0 +1,10 @@
+{
+  "prompt": "The character jumps high, expressing shock. After landing, it looks around, turning its body and eyes to the left and right as if suspiciously looking for something.",
+  "examples": ["smile", "sad"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": false,
+  "first_try": true,
+  "no_examples": false
+}

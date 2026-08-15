@@ -1,0 +1,10 @@
+{
+  "prompt": "The blob performs a double full-spin-jump around its vertical axis.",
+  "examples": ["eney_no_animation"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": false,
+  "first_try": true,
+  "no_examples": true
+}

@@ -1,0 +1,10 @@
+{
+  "prompt": "The blob resembles a DVD-logo screensaver. It starts moving in straight line in XY plane and ricochets off the edges of the 8x4.5 meters (16:9 aspect ratio) frame sereral times like a DVD-logo screensaver.\nThe blob should slightly deform on impact.",
+  "examples": ["bounce"],
+  "notes": "",
+  "comment": "",
+  "refined": true,
+  "incremental_generation": false,
+  "first_try": false,
+  "no_examples": false
+}

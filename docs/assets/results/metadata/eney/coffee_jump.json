@@ -1,0 +1,10 @@
+{
+  "prompt": "The blob jumps in the frame from the right side and shakes its body for a brief moment, as it is excited. It then stops, and the cup of coffee appears to the right of it, buoying in the air, while the blob bobs slightly raises its eyes and blinks with his left eye suggestively. Then it stops and the cup swiftly dissapears. After a short pause, the blob energetically jumps out of the frame from the right side.",
+  "examples": ["eney_cup_of_coffee", "shake", "bounce", "thinking_above"],
+  "notes": "",
+  "comment": "",
+  "refined": true,
+  "incremental_generation": false,
+  "first_try": false,
+  "no_examples": false
+}

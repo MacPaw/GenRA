@@ -1,0 +1,10 @@
+{
+  "prompt": "The blob excitedly jumps in circle.",
+  "examples": ["double_spin_jump", "bounce"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": false,
+  "first_try": true,
+  "no_examples": false
+}

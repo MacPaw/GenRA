@@ -1,0 +1,1434 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bézier Keyframe Sampling Visualizer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0f14;
+      --panel: #0f1622;
+      --line: #1f2a37;
+      --line-2: #243244;
+      --text: #e6edf3;
+      --muted: #9aa4b2;
+      --accent: #8b5cf6;
+      --accent-2: #22c55e;
+      --accent-3: #60a5fa;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --soft: rgba(255,255,255,0.04);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      display: grid;
+      grid-template-columns: min(290px, 28vw) 1fr min(340px, 32vw);
+      height: 100vh;
+    }
+    .panel {
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      overflow: auto;
+      padding: 14px;
+      min-width: 0;
+    }
+    .panel.right {
+      border-right: 0;
+      border-left: 1px solid var(--line);
+    }
+    .canvas-wrap {
+      position: relative;
+      min-width: 0;
+      background: #070a0f;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at top, rgba(31,41,55,0.18), transparent 38%), #070a0f;
+    }
+    h1 {
+      font-size: 16px;
+      margin: 0 0 8px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    h2 {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 18px 0 8px;
+    }
+    p, .hint {
+      color: var(--muted);
+      margin: 6px 0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin: 8px 0;
+      flex-wrap: wrap;
+    }
+    .row.tight { gap: 6px; }
+    label.stack {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    label.inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    button, input[type="number"], input[type="range"], textarea {
+      width: 100%;
+    }
+    button, input[type="number"], textarea {
+      background: #121826;
+      color: var(--text);
+      border: 1px solid var(--line-2);
+      border-radius: 10px;
+      padding: 9px 10px;
+      font: inherit;
+    }
+    button {
+      cursor: pointer;
+      transition: border-color .15s ease, background .15s ease, transform .04s ease;
+    }
+    button:hover { border-color: #3a4b66; background: #141d2c; }
+    button:active { transform: translateY(1px); }
+    button.primary {
+      background: linear-gradient(180deg, rgba(139,92,246,0.18), rgba(139,92,246,0.1));
+      border-color: rgba(139,92,246,0.55);
+    }
+    button.small {
+      width: auto;
+      padding: 7px 10px;
+      border-radius: 9px;
+      font-size: 13px;
+    }
+    input[type="number"] { width: 110px; }
+    input[type="range"] {
+      accent-color: var(--accent);
+      background: transparent;
+      padding: 0;
+    }
+    input[type="checkbox"] { accent-color: var(--accent); }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      background: #0d1420;
+    }
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .card {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      margin: 8px 0;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px 10px;
+    }
+    .stat .k {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .stat .v {
+      font-size: 16px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .legend {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(9,12,18,0.78);
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      padding: 10px 12px;
+      min-width: 210px;
+      backdrop-filter: blur(6px);
+    }
+    .legend div {
+      font-size: 12px;
+      color: #c1cad7;
+      margin: 3px 0;
+    }
+    .pill {
+      display: inline-block;
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      margin-right: 8px;
+      vertical-align: -1px;
+    }
+    .kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: rgba(255,255,255,0.03);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: #d6dde6;
+    }
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(139,92,246,0.12);
+      border: 1px solid rgba(139,92,246,0.35);
+      border-radius: 999px;
+      padding: 6px 10px;
+      color: #dcd1ff;
+      font-size: 12px;
+    }
+    .table-wrap {
+      max-height: 290px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      text-align: left;
+      white-space: nowrap;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #121826;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    tr.highlight td { background: rgba(245,158,11,0.12); }
+    tr.dim td { color: #728093; }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .status-good { color: #9ae6b4; }
+    .status-warn { color: #fcd34d; }
+    .status-bad { color: #fca5a5; }
+    hr {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 14px 0;
+    }
+    .footer-note {
+      font-size: 11px;
+      color: #7f8a99;
+      margin-top: 8px;
+    }
+    .stepper {
+      display: grid;
+      gap: 8px;
+    }
+    .stepper .row { margin: 0; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <h1>Keyframe Sampling</h1>
+    <p>
+      Greedy heap-based knot removal for Bézier keyframe decimation.
+      Edit source points, tune the threshold, and step through each removal.
+    </p>
+
+    <h2>Source curve</h2>
+    <div class="row tight">
+      <button id="btnReset" class="small">Reset</button>
+      <button id="btnAdd" class="small">+ Add</button>
+      <button id="btnDelete" class="small">− Delete</button>
+    </div>
+    <div class="grid2" style="margin-top:4px;">
+      <label class="stack">Random points
+        <input id="numRandCount" type="number" min="3" max="30" step="1" value="8" />
+      </label>
+      <button id="btnRandom" class="small" style="align-self:end;">Randomize</button>
+    </div>
+    <div class="hint">
+      Drag <span style="color:#22c55e;">●</span> points to reshape.
+      <span class="kbd">A</span> add · <span class="kbd">Del</span> delete · <span class="kbd">R</span> random · <span class="kbd">Space</span> play
+    </div>
+
+    <h2>Algorithm</h2>
+    <div class="grid2">
+      <label class="stack">Error threshold (²)
+        <input id="numErr" type="number" min="0" step="0.01" value="0.01" />
+      </label>
+      <label class="stack">Min remaining keys
+        <input id="numTarget" type="number" min="2" step="1" value="2" />
+      </label>
+    </div>
+    <button id="btnRebuild" class="primary" style="margin-top:8px;">Rebuild trace</button>
+
+    <div class="card">
+      <div class="step-badge" id="stepBadge">Step 0 / 0</div>
+      <div class="stepper" style="margin-top:10px;">
+        <input id="stepSlider" type="range" min="0" max="0" step="1" value="0" />
+        <div class="row tight">
+          <button id="btnPrev" class="small">◀</button>
+          <button id="btnPlay" class="small primary" style="flex:1;">▶ Play</button>
+          <button id="btnNext" class="small">▶</button>
+        </div>
+        <button id="btnRunEnd" class="small" style="margin-top:4px;">Jump to final</button>
+      </div>
+    </div>
+
+    <h2>Display</h2>
+    <div class="row"><label class="inline"><input id="chkOriginal" type="checkbox" checked /> Original curve</label></div>
+    <div class="row"><label class="inline"><input id="chkCurrent" type="checkbox" checked /> Reduced curve</label></div>
+    <div class="row"><label class="inline"><input id="chkDense" type="checkbox" checked /> Dense samples</label></div>
+    <div class="row"><label class="inline"><input id="chkHandles" type="checkbox" checked /> Bézier handles</label></div>
+    <div class="row"><label class="inline"><input id="chkRemoved" type="checkbox" checked /> Removed keys</label></div>
+    <div class="row"><label class="inline"><input id="chkFit" type="checkbox" checked /> Fitted segment</label></div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="c"></canvas>
+    <div class="legend">
+      <div><span class="pill" style="background:#6b7280"></span>Original curve</div>
+      <div><span class="pill" style="background:#8b5cf6"></span>Current reduced curve</div>
+      <div><span class="pill" style="background:#60a5fa"></span>Active handles</div>
+      <div><span class="pill" style="background:#22c55e"></span>Active keys</div>
+      <div><span class="pill" style="background:#ef4444"></span>Removed keys</div>
+      <div><span class="pill" style="background:#f59e0b"></span>Current removal / fitted span</div>
+    </div>
+  </div>
+
+  <div class="panel right">
+    <h2>Current step</h2>
+    <div id="stepSummary" class="card"></div>
+
+    <h2>Live state</h2>
+    <div class="stat-grid" id="statGrid"></div>
+
+    <h2>Candidate costs</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Node</th>
+            <th>Prev</th>
+            <th>Next</th>
+            <th>Cost²</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="candidateBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /** ------------------------------
+   *  Small vector helpers
+   *  ------------------------------ */
+  const EPS = 1e-9;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const fmt = (v, d = 4) => Number.isFinite(v) ? Number(v).toFixed(d) : "∞";
+  const v2 = (x, y) => ({ x, y });
+  const add = (a, b) => v2(a.x + b.x, a.y + b.y);
+  const sub = (a, b) => v2(a.x - b.x, a.y - b.y);
+  const mul = (a, s) => v2(a.x * s, a.y * s);
+  const dot = (a, b) => a.x * b.x + a.y * b.y;
+  const len = (a) => Math.hypot(a.x, a.y);
+  const clonePoint = (p) => v2(p.x, p.y);
+  const cloneVecTriplet = (triplet) => triplet.map(clonePoint);
+
+  /** ------------------------------
+   *  Binary min-heap
+   *  ------------------------------ */
+  class MinHeap {
+    constructor(compare) {
+      this.arr = [];
+      this.compare = compare;
+    }
+    push(item) {
+      this.arr.push(item);
+      this._siftUp(this.arr.length - 1);
+    }
+    pop() {
+      if (this.arr.length === 0) return null;
+      const root = this.arr[0];
+      const last = this.arr.pop();
+      if (this.arr.length && last) {
+        this.arr[0] = last;
+        this._siftDown(0);
+      }
+      return root;
+    }
+    get size() {
+      return this.arr.length;
+    }
+    _siftUp(i) {
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (this.compare(this.arr[i], this.arr[p]) >= 0) break;
+        [this.arr[i], this.arr[p]] = [this.arr[p], this.arr[i]];
+        i = p;
+      }
+    }
+    _siftDown(i) {
+      const n = this.arr.length;
+      while (true) {
+        let smallest = i;
+        const l = 2 * i + 1;
+        const r = 2 * i + 2;
+        if (l < n && this.compare(this.arr[l], this.arr[smallest]) < 0) smallest = l;
+        if (r < n && this.compare(this.arr[r], this.arr[smallest]) < 0) smallest = r;
+        if (smallest === i) break;
+        [this.arr[i], this.arr[smallest]] = [this.arr[smallest], this.arr[i]];
+        i = smallest;
+      }
+    }
+  }
+
+  /** ------------------------------
+   *  Algorithm port from Python
+   *  ------------------------------ */
+  function buildBezierFromXY(xs, ys) {
+    const n = xs.length;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const key = v2(xs[i], ys[i]);
+      let hl, hr;
+      if (i > 0) {
+        const dx = xs[i] - xs[i - 1];
+        const dy = ys[i] - ys[i - 1];
+        hl = v2(xs[i] - dx / 3.0, ys[i] - dy / 3.0);
+      } else {
+        hl = clonePoint(key);
+      }
+      if (i < n - 1) {
+        const dx = xs[i + 1] - xs[i];
+        const dy = ys[i + 1] - ys[i];
+        hr = v2(xs[i] + dx / 3.0, ys[i] + dy / 3.0);
+      } else {
+        hr = clonePoint(key);
+      }
+      out.push({ vec: [hl, key, hr] });
+    }
+    return out;
+  }
+
+  function evalCubicBezier(P0, P1, P2, P3, t) {
+    const u = 1 - t;
+    const b0 = u * u * u;
+    const b1 = 3 * u * u * t;
+    const b2 = 3 * u * t * t;
+    const b3 = t * t * t;
+    return v2(
+      b0 * P0.x + b1 * P1.x + b2 * P2.x + b3 * P3.x,
+      b0 * P0.y + b1 * P1.y + b2 * P2.y + b3 * P3.y
+    );
+  }
+
+  function sampleCurveFromBeziers(beziers, resolu = 32) {
+    const pts = [];
+    const n = beziers.length;
+    for (let i = 0; i < n - 1; i++) {
+      const b0 = beziers[i].vec[1];
+      const b1 = beziers[i].vec[2];
+      const b2 = beziers[i + 1].vec[0];
+      const b3 = beziers[i + 1].vec[1];
+      for (let j = 0; j < resolu; j++) {
+        const t = j / resolu;
+        pts.push(evalCubicBezier(b0, b1, b2, b3, t));
+      }
+    }
+    pts.push(clonePoint(beziers[n - 1].vec[1]));
+    return pts;
+  }
+
+  function chordLengthParams(points) {
+    const n = points.length;
+    const cum = new Array(n).fill(0);
+    for (let i = 1; i < n; i++) {
+      cum[i] = cum[i - 1] + len(sub(points[i], points[i - 1]));
+    }
+    const total = cum[n - 1];
+    if (total <= EPS) return cum;
+    for (let i = 0; i < n; i++) cum[i] /= total;
+    return cum;
+  }
+
+  function fitCubicWithTangents(points, tanL, tanR) {
+    const P0 = points[0];
+    const P3 = points[points.length - 1];
+    const ts = chordLengthParams(points);
+
+    let A00 = 0, A01 = 0, A11 = 0;
+    let v0 = 0, v1 = 0;
+    const tl_tl = dot(tanL, tanL);
+    const tr_tr = dot(tanR, tanR);
+    const tl_tr = dot(tanL, tanR);
+
+    const curvePts = new Array(points.length);
+    let errorSqMax = 0;
+
+    for (let i = 0; i < points.length; i++) {
+      const t = ts[i];
+      const u = 1 - t;
+      const b0 = u * u * u;
+      const b1 = 3 * u * u * t;
+      const b2 = 3 * u * t * t;
+      const b3 = t * t * t;
+
+      const base = add(mul(P0, b0 + b1), mul(P3, b2 + b3));
+      const rhs = sub(points[i], base);
+
+      A00 += (b1 * b1) * tl_tl;
+      A01 += (b1 * b2) * tl_tr;
+      A11 += (b2 * b2) * tr_tr;
+      v0 += b1 * dot(rhs, tanL);
+      v1 += b2 * dot(rhs, tanR);
+    }
+
+    const det = A00 * A11 - A01 * A01;
+    let aLen, bLen;
+    if (Math.abs(det) > 1e-7) {
+      aLen = (A11 * v0 - A01 * v1) / det;
+      bLen = (-A01 * v0 + A00 * v1) / det;
+    } else {
+      const chord = len(sub(P3, P0));
+      aLen = chord / 3.0;
+      bLen = chord / 3.0;
+    }
+
+    const P1 = add(P0, mul(tanL, aLen));
+    const P2 = add(P3, mul(tanR, bLen));
+
+    for (let i = 0; i < points.length; i++) {
+      const c = evalCubicBezier(P0, P1, P2, P3, ts[i]);
+      curvePts[i] = c;
+      const d = sub(c, points[i]);
+      const e = dot(d, d);
+      if (e > errorSqMax) errorSqMax = e;
+    }
+
+    return { aLen, bLen, errorSqMax, P1, P2, P0, P3, curvePts, ts };
+  }
+
+  function buildNodesFromBeziers(beziers, resolu = 12) {
+    const points = sampleCurveFromBeziers(beziers, resolu);
+    const nodes = [];
+    const n = beziers.length;
+
+    for (let i = 0; i < n; i++) {
+      const b = beziers[i];
+      const leftVec = sub(b.vec[0], b.vec[1]);
+      const leftLen = len(leftVec);
+      const tan0 = leftLen > EPS ? mul(leftVec, 1 / leftLen) : v2(0, 0);
+
+      const rightVec = sub(b.vec[1], b.vec[2]);
+      const rightLen = len(rightVec);
+      const tan1 = rightLen > EPS ? mul(rightVec, 1 / rightLen) : v2(0, 0);
+
+      nodes.push({
+        index: i,
+        point_index: i * resolu,
+        tan: [tan0, tan1],
+        handles: [leftLen, -rightLen],
+        can_remove: !(i === 0 || i === n - 1),
+        prev: i > 0 ? i - 1 : null,
+        next: i < n - 1 ? i + 1 : null,
+        is_removed: false,
+        version: 0,
+        cost_sq: Infinity,
+        new_prev_right_len: 0,
+        new_next_left_len: 0,
+      });
+    }
+
+    nodes[0].can_remove = false;
+    nodes[n - 1].can_remove = false;
+    return { nodes, points };
+  }
+
+  function getSegmentPoints(points, startIdx, endIdx) {
+    if (endIdx < startIdx) return [];
+    return points.slice(startIdx, endIdx + 1).map(clonePoint);
+  }
+
+  function recomputeNodeRemovalCost(k, nodes, points, heap, errorSqMax) {
+    if (
+      k.is_removed || !k.can_remove || k.prev === null || k.next === null ||
+      nodes[k.prev].is_removed || nodes[k.next].is_removed
+    ) {
+      return null;
+    }
+
+    const startIdx = nodes[k.prev].point_index;
+    const endIdx = nodes[k.next].point_index;
+    if (endIdx < startIdx) return null;
+
+    const segPoints = getSegmentPoints(points, startIdx, endIdx);
+    const tanL = nodes[k.prev].tan[1];
+    const tanR = nodes[k.next].tan[0];
+    const fit = fitCubicWithTangents(segPoints, tanL, tanR);
+
+    k.version += 1;
+    if (fit.errorSqMax < errorSqMax) {
+      k.cost_sq = fit.errorSqMax;
+      k.new_prev_right_len = fit.aLen;
+      k.new_next_left_len = fit.bLen;
+      heap.push({ cost_sq: fit.errorSqMax, version: k.version, index: k.index, nodeIndex: k.index });
+    } else {
+      k.cost_sq = Infinity;
+      k.new_prev_right_len = fit.aLen;
+      k.new_next_left_len = fit.bLen;
+    }
+
+    return fit;
+  }
+
+  function reconstructBeziers(baseBeziers, nodeStates) {
+    const out = [];
+    for (let i = 0; i < baseBeziers.length; i++) {
+      const ns = nodeStates[i];
+      if (ns.is_removed) continue;
+      const bNew = { vec: cloneVecTriplet(baseBeziers[i].vec), sourceIndex: i };
+      if (i > 0 && nodeStates[i - 1].is_removed) {
+        bNew.vec[0] = add(bNew.vec[1], mul(ns.tan[0], ns.handles[0]));
+      }
+      if (i < baseBeziers.length - 1 && nodeStates[i + 1].is_removed) {
+        bNew.vec[2] = add(bNew.vec[1], mul(ns.tan[1], ns.handles[1]));
+      }
+      out.push(bNew);
+    }
+    return out;
+  }
+
+  function makeNodeSnapshot(nodes) {
+    return nodes.map((n) => ({
+      index: n.index,
+      point_index: n.point_index,
+      tan: [clonePoint(n.tan[0]), clonePoint(n.tan[1])],
+      handles: [n.handles[0], n.handles[1]],
+      can_remove: n.can_remove,
+      prev: n.prev,
+      next: n.next,
+      is_removed: n.is_removed,
+      version: n.version,
+      cost_sq: n.cost_sq,
+      new_prev_right_len: n.new_prev_right_len,
+      new_next_left_len: n.new_next_left_len,
+    }));
+  }
+
+  function buildCandidateTable(nodeStates, errorSqMax) {
+    return nodeStates
+      .filter((n) => !n.is_removed && n.can_remove && n.prev !== null && n.next !== null)
+      .map((n) => ({
+        index: n.index,
+        prev: n.prev,
+        next: n.next,
+        cost_sq: n.cost_sq,
+        removable: Number.isFinite(n.cost_sq) && n.cost_sq < errorSqMax,
+      }))
+      .sort((a, b) => {
+        const af = Number.isFinite(a.cost_sq) ? a.cost_sq : Infinity;
+        const bf = Number.isFinite(b.cost_sq) ? b.cost_sq : Infinity;
+        if (af !== bf) return af - bf;
+        return a.index - b.index;
+      });
+  }
+
+  function createSnapshot({
+    label,
+    nodes,
+    baseBeziers,
+    points,
+    errorSqMax,
+    renderRes,
+    action = null,
+  }) {
+    const nodeStates = makeNodeSnapshot(nodes);
+    const renderBeziers = reconstructBeziers(baseBeziers, nodeStates);
+    const reducedCurve = renderBeziers.length >= 2 ? sampleCurveFromBeziers(renderBeziers, renderRes) : [];
+    const candidateTable = buildCandidateTable(nodeStates, errorSqMax);
+    return {
+      label,
+      action,
+      nodeStates,
+      renderBeziers,
+      reducedCurve,
+      denseReference: points.map(clonePoint),
+      candidateTable,
+      activeCount: nodeStates.filter((n) => !n.is_removed).length,
+      removedCount: nodeStates.filter((n) => n.is_removed).length,
+      minCandidate: candidateTable.find((c) => c.removable) || null,
+      errorSqMax,
+    };
+  }
+
+  function executeReductionTrace(srcPoints, errorSqMax, targetLen, resolu, renderRes) {
+    const xs = srcPoints.map((p) => p.x);
+    const ys = srcPoints.map((p) => p.y);
+    const baseBeziers = buildBezierFromXY(xs, ys);
+    const { nodes, points } = buildNodesFromBeziers(baseBeziers, resolu);
+    const initialCurve = sampleCurveFromBeziers(baseBeziers, renderRes);
+
+    const heap = new MinHeap((a, b) => {
+      if (a.cost_sq !== b.cost_sq) return a.cost_sq - b.cost_sq;
+      if (a.version !== b.version) return a.version - b.version;
+      return a.index - b.index;
+    });
+
+    for (const node of nodes) {
+      recomputeNodeRemovalCost(node, nodes, points, heap, errorSqMax);
+    }
+
+    const trace = [];
+    trace.push(createSnapshot({
+      label: "Initialized heap",
+      nodes,
+      baseBeziers,
+      points,
+      errorSqMax,
+      renderRes,
+      action: {
+        type: "init",
+        description: "Dense reference sampled; all removable interior knots received an initial removal cost.",
+      },
+    }));
+
+    let totalRemaining = nodes.length;
+    const target = Math.max(2, Math.floor(targetLen));
+
+    while (totalRemaining > target && heap.size > 0) {
+      const item = heap.pop();
+      if (!item) break;
+      const k = nodes[item.nodeIndex];
+
+      if (
+        k.is_removed || item.version !== k.version || k.prev === null || k.next === null ||
+        nodes[k.prev].is_removed || nodes[k.next].is_removed || item.cost_sq !== k.cost_sq || item.cost_sq >= errorSqMax
+      ) {
+        continue;
+      }
+
+      const prev = nodes[k.prev];
+      const next = nodes[k.next];
+      const startIdx = prev.point_index;
+      const endIdx = next.point_index;
+      const segPoints = getSegmentPoints(points, startIdx, endIdx);
+      const fit = fitCubicWithTangents(segPoints, prev.tan[1], next.tan[0]);
+
+      prev.handles[1] = k.new_prev_right_len;
+      next.handles[0] = k.new_next_left_len;
+
+      prev.next = next.index;
+      next.prev = prev.index;
+
+      k.prev = null;
+      k.next = null;
+      k.is_removed = true;
+      totalRemaining -= 1;
+
+      if (prev.can_remove && !prev.is_removed) recomputeNodeRemovalCost(prev, nodes, points, heap, errorSqMax);
+      if (next.can_remove && !next.is_removed) recomputeNodeRemovalCost(next, nodes, points, heap, errorSqMax);
+
+      trace.push(createSnapshot({
+        label: `Removed node ${k.index}`,
+        nodes,
+        baseBeziers,
+        points,
+        errorSqMax,
+        renderRes,
+        action: {
+          type: "remove",
+          removedIndex: k.index,
+          prevIndex: prev.index,
+          nextIndex: next.index,
+          costSq: item.cost_sq,
+          newPrevRightLen: k.new_prev_right_len,
+          newNextLeftLen: k.new_next_left_len,
+          fit,
+          segmentPoints: segPoints,
+          description: `Removed node ${k.index}; refit span [${prev.index} → ${next.index}] with fixed endpoint tangents.`,
+        },
+      }));
+    }
+
+    return {
+      trace,
+      baseBeziers,
+      initialCurve,
+      denseReference: points,
+    };
+  }
+
+  /** ------------------------------
+   *  UI state
+   *  ------------------------------ */
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+
+  const state = {
+    points: [],
+    selected: -1,
+    dragging: false,
+    dragOffset: v2(0, 0),
+    trace: [],
+    stepIndex: 0,
+    playing: false,
+    playTimer: null,
+    lastRun: null,
+    view: { pad: 48, xMin: 0, xMax: 100, yMin: -1, yMax: 1 },
+  };
+
+  function fitCanvas() {
+    const r = canvas.getBoundingClientRect();
+    canvas.width = Math.floor(r.width * devicePixelRatio);
+    canvas.height = Math.floor(r.height * devicePixelRatio);
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+
+  function worldToScreen(p) {
+    const { pad, xMin, xMax, yMin, yMax } = state.view;
+    const w = canvas.getBoundingClientRect().width;
+    const h = canvas.getBoundingClientRect().height;
+    const sx = pad + (p.x - xMin) * (w - 2 * pad) / Math.max(EPS, (xMax - xMin));
+    const sy = h - pad - (p.y - yMin) * (h - 2 * pad) / Math.max(EPS, (yMax - yMin));
+    return v2(sx, sy);
+  }
+
+  function screenToWorld(p) {
+    const { pad, xMin, xMax, yMin, yMax } = state.view;
+    const w = canvas.getBoundingClientRect().width;
+    const h = canvas.getBoundingClientRect().height;
+    const x = xMin + (p.x - pad) * (xMax - xMin) / Math.max(EPS, (w - 2 * pad));
+    const y = yMin + (h - pad - p.y) * (yMax - yMin) / Math.max(EPS, (h - 2 * pad));
+    return v2(x, y);
+  }
+
+  function makeDefaultPoints() {
+    return [
+      v2(0, 0.0),
+      v2(2, 0.0),
+      v2(5, 0.02),
+      v2(8, 0.15),
+      v2(12, 0.45),
+      v2(16, 0.78),
+      v2(20, 0.9),
+      v2(24, 0.9),
+      v2(28, 0.9),
+      v2(32, 0.88),
+      v2(36, 0.72),
+      v2(40, 0.42),
+      v2(44, 0.1),
+      v2(48, -0.05),
+      v2(52, -0.05),
+      v2(56, -0.04),
+      v2(60, 0.0),
+      v2(64, 0.0),
+      v2(68, 0.0),
+      v2(72, 0.12),
+      v2(76, 0.35),
+      v2(80, 0.55),
+      v2(84, 0.55),
+      v2(88, 0.55),
+      v2(92, 0.4),
+      v2(96, 0.15),
+      v2(100, 0.0),
+    ];
+  }
+
+  function randomizePoints() {
+    const count = clamp(parseInt(document.getElementById("numRandCount").value, 10) || 8, 3, 30);
+    const pts = [];
+    let x = 0;
+    for (let i = 0; i < count; i++) {
+      if (i === 0) x = 0;
+      else if (i === count - 1) x = 100;
+      else x += 8 + Math.random() * 14;
+      pts.push(v2(x, (Math.random() * 2 - 1) * (0.22 + Math.random() * 0.88)));
+    }
+    pts[count - 1].x = 100;
+    for (let i = 1; i < pts.length; i++) {
+      pts[i].x = Math.max(pts[i].x, pts[i - 1].x + 1);
+    }
+    state.points = pts;
+    state.selected = -1;
+    rebuildTrace(false);
+  }
+
+  function resetPoints() {
+    state.points = makeDefaultPoints();
+    state.selected = -1;
+    rebuildTrace(false);
+  }
+
+  function addPoint() {
+    let x = 50;
+    let y = 0;
+    if (state.selected >= 0 && state.selected < state.points.length - 1) {
+      const a = state.points[state.selected];
+      const b = state.points[state.selected + 1];
+      x = 0.5 * (a.x + b.x);
+      y = 0.5 * (a.y + b.y);
+    } else if (state.points.length >= 2) {
+      const a = state.points[state.points.length - 2];
+      const b = state.points[state.points.length - 1];
+      x = b.x + Math.max(4, (b.x - a.x) * 0.5);
+      y = b.y;
+    }
+    const p = v2(x, y);
+    state.points.push(p);
+    state.points.sort((u, v) => u.x - v.x);
+    enforceStrictXAll();
+    state.selected = state.points.indexOf(p);
+    rebuildTrace(false);
+  }
+
+  function deleteSelected() {
+    if (state.selected < 0 || state.points.length <= 2) return;
+    state.points.splice(state.selected, 1);
+    state.selected = clamp(state.selected, 0, state.points.length - 1);
+    rebuildTrace(false);
+  }
+
+  function enforceStrictXAll() {
+    const eps = 0.001;
+    state.points.sort((a, b) => a.x - b.x);
+    for (let i = 1; i < state.points.length; i++) {
+      if (!(state.points[i].x > state.points[i - 1].x)) {
+        state.points[i].x = state.points[i - 1].x + eps;
+      }
+    }
+  }
+
+  function enforceStrictXFor(i) {
+    const eps = 0.001;
+    if (i > 0) state.points[i].x = Math.max(state.points[i].x, state.points[i - 1].x + eps);
+    if (i < state.points.length - 1) state.points[i].x = Math.min(state.points[i].x, state.points[i + 1].x - eps);
+  }
+
+  function getControls() {
+    return {
+      errorSqMax: Math.max(0, parseFloat(document.getElementById("numErr").value) || 0),
+      targetLen: Math.max(2, parseInt(document.getElementById("numTarget").value, 10) || 2),
+      resolu: 12,
+      renderRes: 48,
+    };
+  }
+
+  function rebuildTrace(preserveCurrentStep) {
+    stopPlayback();
+    enforceStrictXAll();
+    const controls = getControls();
+    const previousStep = state.stepIndex;
+    state.lastRun = executeReductionTrace(state.points, controls.errorSqMax, controls.targetLen, controls.resolu, controls.renderRes);
+    state.trace = state.lastRun.trace;
+    state.stepIndex = preserveCurrentStep ? clamp(previousStep, 0, state.trace.length - 1) : 0;
+    syncStepUi();
+    draw();
+  }
+
+  function currentSnapshot() {
+    if (!state.trace.length) return null;
+    return state.trace[state.stepIndex];
+  }
+
+  function syncStepUi() {
+    const slider = document.getElementById("stepSlider");
+    slider.max = Math.max(0, state.trace.length - 1);
+    slider.value = String(state.stepIndex);
+    document.getElementById("stepBadge").textContent = `Step ${state.stepIndex} / ${Math.max(0, state.trace.length - 1)}`;
+    renderSidePanels();
+  }
+
+  function niceStep(range, maxTicks) {
+    const rough = range / maxTicks;
+    const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+    const norm = rough / mag;
+    const nice = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+    return nice * mag;
+  }
+
+  function tickLabel(v, step) {
+    const decimals = Math.max(0, -Math.floor(Math.log10(step) - 0.001));
+    return v.toFixed(decimals);
+  }
+
+  function drawGrid() {
+    const w = canvas.getBoundingClientRect().width;
+    const h = canvas.getBoundingClientRect().height;
+    const pad = state.view.pad;
+    const { xMin, xMax, yMin, yMax } = state.view;
+    ctx.clearRect(0, 0, w, h);
+
+    const xStep = niceStep(xMax - xMin, 8);
+    const yStep = niceStep(yMax - yMin, 6);
+    const xStart = Math.ceil(xMin / xStep) * xStep;
+    const yStart = Math.ceil(yMin / yStep) * yStep;
+
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let v = xStart; v <= xMax; v += xStep) {
+      const sx = worldToScreen(v2(v, 0)).x;
+      ctx.moveTo(sx, pad);
+      ctx.lineTo(sx, h - pad);
+    }
+    for (let v = yStart; v <= yMax; v += yStep) {
+      const sy = worldToScreen(v2(0, v)).y;
+      ctx.moveTo(pad, sy);
+      ctx.lineTo(w - pad, sy);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = "#1f2937";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    const y0 = worldToScreen(v2(0, 0)).y;
+    if (y0 > pad && y0 < h - pad) {
+      ctx.moveTo(pad, y0);
+      ctx.lineTo(w - pad, y0);
+    }
+    const x0 = worldToScreen(v2(0, 0)).x;
+    if (x0 > pad && x0 < w - pad) {
+      ctx.moveTo(x0, pad);
+      ctx.lineTo(x0, h - pad);
+    }
+    ctx.stroke();
+
+    ctx.font = "11px system-ui, -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#64748b";
+    for (let v = xStart; v <= xMax; v += xStep) {
+      const sx = worldToScreen(v2(v, 0)).x;
+      ctx.fillText(tickLabel(v, xStep), sx, h - pad + 6);
+    }
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let v = yStart; v <= yMax; v += yStep) {
+      const sy = worldToScreen(v2(0, v)).y;
+      ctx.fillText(tickLabel(v, yStep), pad - 6, sy);
+    }
+
+    ctx.strokeStyle = "#243042";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(pad, pad, w - 2 * pad, h - 2 * pad);
+  }
+
+  function autoView(snapshot) {
+    const pts = [];
+    for (const p of state.points) pts.push(p);
+    if (snapshot) {
+      for (const b of snapshot.renderBeziers) {
+        pts.push(...b.vec);
+      }
+      if (snapshot.action && snapshot.action.fit) {
+        pts.push(snapshot.action.fit.P0, snapshot.action.fit.P1, snapshot.action.fit.P2, snapshot.action.fit.P3);
+      }
+    }
+    const xs = pts.map((p) => p.x);
+    const ys = pts.map((p) => p.y);
+    const xMin = Math.min(...xs);
+    const xMax = Math.max(...xs);
+    const yMin = Math.min(...ys);
+    const yMax = Math.max(...ys);
+    const mx = Math.max(2, (xMax - xMin) * 0.08);
+    const my = Math.max(0.2, (yMax - yMin) * 0.24);
+    state.view.xMin = xMin - mx;
+    state.view.xMax = xMax + mx;
+    state.view.yMin = yMin - my;
+    state.view.yMax = yMax + my;
+  }
+
+  function drawPolyline(points, color, width, alpha = 1, dashed = false) {
+    if (!points || points.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.globalAlpha = alpha;
+    ctx.setLineDash(dashed ? [8, 7] : []);
+    ctx.beginPath();
+    points.forEach((p, i) => {
+      const s = worldToScreen(p);
+      if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawDenseSamples(points, color, alpha, step = 1, radius = 2.2) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.globalAlpha = alpha;
+    for (let i = 0; i < points.length; i += step) {
+      const s = worldToScreen(points[i]);
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawHandles(snapshot) {
+    if (!snapshot) return;
+    ctx.save();
+    for (const b of snapshot.renderBeziers) {
+      const left = worldToScreen(b.vec[0]);
+      const key = worldToScreen(b.vec[1]);
+      const right = worldToScreen(b.vec[2]);
+      ctx.strokeStyle = "rgba(96,165,250,0.78)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(left.x, left.y);
+      ctx.lineTo(key.x, key.y);
+      ctx.lineTo(right.x, right.y);
+      ctx.stroke();
+      ctx.fillStyle = "#60a5fa";
+      ctx.beginPath(); ctx.arc(left.x, left.y, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(right.x, right.y, 4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawKeys(snapshot) {
+    if (!snapshot) return;
+    const chkRemoved = document.getElementById("chkRemoved").checked;
+
+    const fitRemoved = snapshot.action && snapshot.action.type === "remove" ? snapshot.action.removedIndex : null;
+    const fitPrev = snapshot.action && snapshot.action.type === "remove" ? snapshot.action.prevIndex : null;
+    const fitNext = snapshot.action && snapshot.action.type === "remove" ? snapshot.action.nextIndex : null;
+
+    for (let i = 0; i < state.points.length; i++) {
+      const ns = snapshot.nodeStates[i];
+      const sp = worldToScreen(state.points[i]);
+      if (ns.is_removed) {
+        if (!chkRemoved) continue;
+        ctx.fillStyle = (fitRemoved === i) ? "#f59e0b" : "rgba(239,68,68,0.92)";
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(sp.x - 5, sp.y - 5);
+        ctx.lineTo(sp.x + 5, sp.y + 5);
+        ctx.moveTo(sp.x + 5, sp.y - 5);
+        ctx.lineTo(sp.x - 5, sp.y + 5);
+        ctx.stroke();
+      } else {
+        let fill = "#22c55e";
+        if (fitPrev === i || fitNext === i) fill = "#f59e0b";
+        ctx.fillStyle = fill;
+        const s = i === state.selected ? 10 : 8;
+        ctx.fillRect(sp.x - s / 2, sp.y - s / 2, s, s);
+        if (i === state.selected) {
+          ctx.strokeStyle = "#fde68a";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(sp.x - s / 2 - 1, sp.y - s / 2 - 1, s + 2, s + 2);
+        }
+      }
+    }
+  }
+
+  function drawFitOverlay(snapshot) {
+    if (!snapshot || !snapshot.action || snapshot.action.type !== "remove") return;
+    const fit = snapshot.action.fit;
+    const segmentPoints = snapshot.action.segmentPoints || [];
+    if (segmentPoints.length) {
+      drawDenseSamples(segmentPoints, "#f59e0b", 0.32, Math.max(1, Math.floor(segmentPoints.length / 40)), 2.5);
+    }
+
+    const overlay = [];
+    const samples = 80;
+    for (let i = 0; i <= samples; i++) {
+      overlay.push(evalCubicBezier(fit.P0, fit.P1, fit.P2, fit.P3, i / samples));
+    }
+    drawPolyline(overlay, "#f59e0b", 2.4, 1, true);
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(245,158,11,0.65)";
+    ctx.lineWidth = 1.2;
+    const P0 = worldToScreen(fit.P0);
+    const P1 = worldToScreen(fit.P1);
+    const P2 = worldToScreen(fit.P2);
+    const P3 = worldToScreen(fit.P3);
+    ctx.beginPath();
+    ctx.moveTo(P0.x, P0.y); ctx.lineTo(P1.x, P1.y);
+    ctx.moveTo(P3.x, P3.y); ctx.lineTo(P2.x, P2.y);
+    ctx.stroke();
+    ctx.fillStyle = "#f59e0b";
+    for (const p of [P0, P1, P2, P3]) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    const snapshot = currentSnapshot();
+    autoView(snapshot);
+    drawGrid();
+
+    const showOriginal = document.getElementById("chkOriginal").checked;
+    const showCurrent = document.getElementById("chkCurrent").checked;
+    const showDense = document.getElementById("chkDense").checked;
+    const showHandles = document.getElementById("chkHandles").checked;
+    const showFit = document.getElementById("chkFit").checked;
+
+    if (state.lastRun && showOriginal) {
+      drawPolyline(state.lastRun.initialCurve, "#6b7280", 1.8, 0.85, false);
+    }
+    if (snapshot && showDense) {
+      drawDenseSamples(snapshot.denseReference, "#94a3b8", 0.22, Math.max(1, Math.floor(snapshot.denseReference.length / 120)), 2.1);
+    }
+    if (snapshot && showCurrent) {
+      drawPolyline(snapshot.reducedCurve, "#8b5cf6", 2.6, 1, false);
+    }
+    if (snapshot && showHandles) {
+      drawHandles(snapshot);
+    }
+    if (snapshot && showFit) {
+      drawFitOverlay(snapshot);
+    }
+    if (snapshot) {
+      drawKeys(snapshot);
+    }
+  }
+
+  function renderSidePanels() {
+    const snapshot = currentSnapshot();
+    if (!snapshot) return;
+    const stepSummary = document.getElementById("stepSummary");
+    const statGrid = document.getElementById("statGrid");
+    const candidateBody = document.getElementById("candidateBody");
+
+    const a = snapshot.action;
+    let html = "";
+    if (!a || a.type === "init") {
+      const minTxt = snapshot.minCandidate ? `Current heap minimum: node <span class="mono">${snapshot.minCandidate.index}</span> with cost² <span class="mono">${fmt(snapshot.minCandidate.cost_sq, 6)}</span>.` : "No removable node is currently under the threshold.";
+      html = `
+        <p style="margin-top:0;"><strong>Initialization.</strong> ${a && a.description ? a.description : ""}</p>
+        <p>${minTxt}</p>
+        <p style="margin-bottom:0;">Threshold: <span class="mono">${fmt(snapshot.errorSqMax, 6)}</span></p>
+      `;
+    } else {
+      html = `
+        <p style="margin-top:0;"><strong>Accepted removal:</strong> node <span class="mono">${a.removedIndex}</span></p>
+        <p>${a.description}</p>
+        <p class="mono">cost² = ${fmt(a.costSq, 6)}</p>
+        <p class="mono">prev.right_len = ${fmt(a.newPrevRightLen, 6)} &nbsp;&nbsp; next.left_len = ${fmt(a.newNextLeftLen, 6)}</p>
+        <p style="margin-bottom:0;">After unlinking the node, only its surviving neighbors had to be re-evaluated and pushed back to the heap.</p>
+      `;
+    }
+    stepSummary.innerHTML = html;
+
+    const total = snapshot.nodeStates.length;
+    const removable = snapshot.candidateTable.filter((c) => c.removable).length;
+    statGrid.innerHTML = [
+      ["Total keys", total],
+      ["Active keys", snapshot.activeCount],
+      ["Removed keys", snapshot.removedCount],
+      ["Heap-eligible", removable],
+    ].map(([k, v]) => `
+      <div class="stat">
+        <div class="k">${k}</div>
+        <div class="v">${v}</div>
+      </div>
+    `).join("");
+
+    candidateBody.innerHTML = snapshot.candidateTable.map((c, idx) => {
+      const isMin = snapshot.minCandidate && snapshot.minCandidate.index === c.index;
+      const status = c.removable ? (isMin ? "heap min" : "candidate") : "blocked";
+      const cls = isMin ? "highlight" : (!c.removable ? "dim" : "");
+      return `
+        <tr class="${cls}">
+          <td class="mono">${c.index}</td>
+          <td class="mono">${c.prev}</td>
+          <td class="mono">${c.next}</td>
+          <td class="mono">${Number.isFinite(c.cost_sq) ? fmt(c.cost_sq, 2) : "∞"}</td>
+          <td class="${c.removable ? "status-warn" : "status-bad"}">${status}</td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="5" class="dim">No removable interior nodes remain.</td></tr>`;
+  }
+
+  function hitTestKeys(screenPt) {
+    let best = -1;
+    let bestD = Infinity;
+    for (let i = 0; i < state.points.length; i++) {
+      const sp = worldToScreen(state.points[i]);
+      const d = Math.hypot(sp.x - screenPt.x, sp.y - screenPt.y);
+      if (d < 16 && d < bestD) {
+        best = i;
+        bestD = d;
+      }
+    }
+    return best;
+  }
+
+  function setStep(step) {
+    state.stepIndex = clamp(step, 0, state.trace.length - 1);
+    syncStepUi();
+    draw();
+  }
+
+  function stepForward() {
+    if (state.stepIndex >= state.trace.length - 1) {
+      stopPlayback();
+      return;
+    }
+    setStep(state.stepIndex + 1);
+  }
+
+  function stepBackward() {
+    setStep(state.stepIndex - 1);
+  }
+
+  function startPlayback() {
+    if (state.playing) return;
+    state.playing = true;
+    document.getElementById("btnPlay").textContent = "Pause";
+    state.playTimer = setInterval(() => {
+      if (state.stepIndex >= state.trace.length - 1) {
+        stopPlayback();
+      } else {
+        stepForward();
+      }
+    }, 950);
+  }
+
+  function stopPlayback() {
+    state.playing = false;
+    document.getElementById("btnPlay").textContent = "Play";
+    if (state.playTimer) {
+      clearInterval(state.playTimer);
+      state.playTimer = null;
+    }
+  }
+
+  /** ------------------------------
+   *  Event wiring
+   *  ------------------------------ */
+  new ResizeObserver(() => { fitCanvas(); draw(); }).observe(canvas);
+  window.addEventListener("resize", () => { fitCanvas(); draw(); });
+
+  canvas.addEventListener("pointerdown", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const p = v2(e.clientX - rect.left, e.clientY - rect.top);
+    const idx = hitTestKeys(p);
+    state.selected = idx;
+    if (idx !== -1) {
+      state.dragging = true;
+      const world = screenToWorld(p);
+      state.dragOffset = sub(state.points[idx], world);
+      canvas.setPointerCapture(e.pointerId);
+    }
+    draw();
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (!state.dragging || state.selected === -1) return;
+    const rect = canvas.getBoundingClientRect();
+    const p = v2(e.clientX - rect.left, e.clientY - rect.top);
+    const world = add(screenToWorld(p), state.dragOffset);
+    state.points[state.selected].x = world.x;
+    state.points[state.selected].y = world.y;
+    enforceStrictXFor(state.selected);
+    rebuildTrace(true);
+  });
+
+  canvas.addEventListener("pointerup", (e) => {
+    state.dragging = false;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+  });
+
+  document.getElementById("btnReset").addEventListener("click", resetPoints);
+  document.getElementById("btnRandom").addEventListener("click", randomizePoints);
+  document.getElementById("btnAdd").addEventListener("click", addPoint);
+  document.getElementById("btnDelete").addEventListener("click", deleteSelected);
+  document.getElementById("btnRebuild").addEventListener("click", () => rebuildTrace(true));
+  document.getElementById("btnRunEnd").addEventListener("click", () => setStep(state.trace.length - 1));
+  document.getElementById("btnPrev").addEventListener("click", stepBackward);
+  document.getElementById("btnNext").addEventListener("click", stepForward);
+  document.getElementById("btnPlay").addEventListener("click", () => state.playing ? stopPlayback() : startPlayback());
+  document.getElementById("stepSlider").addEventListener("input", (e) => setStep(parseInt(e.target.value, 10) || 0));
+  ["numErr", "numTarget", "chkOriginal", "chkCurrent", "chkDense", "chkHandles", "chkRemoved", "chkFit"]
+    .forEach((id) => document.getElementById(id).addEventListener("change", () => {
+      if (id.startsWith("num")) rebuildTrace(true); else draw();
+    }));
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      state.selected = -1;
+      draw();
+    } else if (e.key === "Delete") {
+      deleteSelected();
+    } else if (e.key.toLowerCase() === "a") {
+      addPoint();
+    } else if (e.key.toLowerCase() === "r") {
+      randomizePoints();
+    } else if (e.key === " ") {
+      e.preventDefault();
+      if (state.playing) stopPlayback(); else startPlayback();
+    } else if (e.key === "ArrowRight") {
+      stepForward();
+    } else if (e.key === "ArrowLeft") {
+      stepBackward();
+    }
+  });
+
+  /** ------------------------------
+   *  Boot
+   *  ------------------------------ */
+  fitCanvas();
+  resetPoints();
+})();
+</script>
+</body>
+</html>

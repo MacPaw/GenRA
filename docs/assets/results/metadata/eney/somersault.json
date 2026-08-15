@@ -1,0 +1,10 @@
+{
+  "prompt": "The blob performs a somersault on the ground, rolling forward with its body around x-axis in positive direction and translating forward, ending up looking forward as in the original position with a slight bounce in the end.",
+  "examples": ["double_spin_jump", "bounce"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": false,
+  "first_try": false,
+  "no_examples": false
+}

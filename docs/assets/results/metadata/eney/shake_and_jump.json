@@ -1,0 +1,10 @@
+{
+  "prompt": "Blob shakes its eyes and then jumps",
+  "examples": ["bounce", "jiggles"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": false,
+  "first_try": false,
+  "no_examples": false
+}

@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Auto-Clamped Bézier F-Curve Visualizer</title>
+    <style>
+        :root {
+            color-scheme: dark;
+      --bg: #0b0f14;
+      --panel: #0f1622;
+      --line: #1f2a37;
+      --line-2: #243244;
+      --text: #e6edf3;
+      --muted: #9aa4b2;
+      --accent: #8b5cf6;
+      --accent-2: #22c55e;
+      --accent-3: #60a5fa;
+      --bad: #ef4444;
+    }
+    * { box-sizing: border-box; }
+        body {
+            margin: 0;
+      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+        .wrap {
+            display: grid;
+      grid-template-columns: min(290px, 28vw) 1fr;
+            height: 100vh;
+        }
+        .panel {
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+            overflow: auto;
+      padding: 14px;
+      min-width: 0;
+    }
+    h1 {
+      font-size: 16px;
+      margin: 0 0 6px;
+            font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    h2 {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 18px 0 8px;
+    }
+    p, .hint {
+      color: var(--muted);
+      margin: 6px 0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+        .row {
+            display: flex;
+      gap: 8px;
+            align-items: center;
+            margin: 8px 0;
+      flex-wrap: wrap;
+    }
+    .row.tight { gap: 6px; }
+    label.stack {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    label.inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+            gap: 8px;
+    }
+    button, input[type="number"] {
+      width: 100%;
+            background: #121826;
+      color: var(--text);
+      border: 1px solid var(--line-2);
+            border-radius: 10px;
+      padding: 9px 10px;
+      font: inherit;
+        }
+        button {
+            cursor: pointer;
+      transition: border-color .15s ease, background .15s ease, transform .04s ease;
+    }
+    button:hover { border-color: #3a4b66; background: #141d2c; }
+    button:active { transform: translateY(1px); }
+    button.primary {
+      background: linear-gradient(180deg, rgba(139,92,246,0.18), rgba(139,92,246,0.1));
+      border-color: rgba(139,92,246,0.55);
+    }
+    button.small {
+      width: auto;
+      padding: 7px 10px;
+      border-radius: 9px;
+      font-size: 13px;
+    }
+    input[type="number"] { width: 100%; }
+    input[type="checkbox"] { accent-color: var(--accent); }
+        .canvas-wrap {
+            position: relative;
+      min-width: 0;
+      background: #070a0f;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+      background: radial-gradient(circle at top, rgba(31,41,55,0.18), transparent 38%), #070a0f;
+        }
+        .legend {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+      background: rgba(9,12,18,0.78);
+      border: 1px solid var(--line-2);
+            border-radius: 12px;
+      padding: 10px 12px;
+      min-width: 180px;
+      backdrop-filter: blur(6px);
+        }
+        .legend div {
+            font-size: 12px;
+      color: #c1cad7;
+      margin: 3px 0;
+        }
+        .pill {
+            display: inline-block;
+      width: 11px;
+      height: 11px;
+            border-radius: 3px;
+            margin-right: 8px;
+            vertical-align: -1px;
+        }
+    .card {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      margin: 8px 0;
+    }
+    .kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: rgba(255,255,255,0.03);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+      color: #d6dde6;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="panel">
+    <h1>Bézier Interpolation</h1>
+    <p>
+      Auto-clamped cubic Bézier F-curve interpolation.
+      Drag keys to reshape, toggle handles and clamping.
+    </p>
+
+    <h2>Keyframes</h2>
+    <div class="row tight">
+      <button id="btnReset" class="small">Reset</button>
+      <button id="btnAdd" class="small">+ Add</button>
+      <button id="btnDelete" class="small">− Delete</button>
+            </div>
+    <div class="grid2" style="margin-top:4px;">
+      <label class="stack">Random points
+        <input id="numRandCount" type="number" min="3" max="20" step="1" value="6" />
+      </label>
+      <button id="btnRandom" class="small" style="align-self:end;">Randomize</button>
+            </div>
+    <div class="hint">
+      Drag <span style="color:#22c55e;">■</span> keys to edit.
+      <span class="kbd">A</span> add · <span class="kbd">Del</span> delete · <span class="kbd">R</span> random · <span class="kbd">Esc</span> deselect
+            </div>
+
+    <h2>Algorithm</h2>
+    <div class="card">
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:0;">
+        <button id="btnRun" class="primary">▶ Run Interpolation</button>
+        <button id="btnLinear" class="small">Reset to linear</button>
+      </div>
+      <div class="hint" style="margin-top:6px;" id="algoStatus">
+        Showing <strong>linear interpolation</strong> — handles point toward adjacent keys.
+            </div>
+            </div>
+
+    <h2>Options</h2>
+    <div class="row"><label class="inline"><input id="chkExtrapConst" type="checkbox" checked /> Lock endpoints (constant extrapolation)</label></div>
+
+    <h2>Display</h2>
+    <div class="row"><label class="inline"><input id="chkShowHandles" type="checkbox" checked /> Handles</label></div>
+    <div class="row"><label class="inline"><input id="chkShowSamples" type="checkbox" checked /> Sample dots</label></div>
+        </div>
+
+        <div class="canvas-wrap">
+            <canvas id="c"></canvas>
+            <div class="legend">
+                <div><span class="pill" style="background:#8b5cf6"></span>Bézier curve</div>
+      <div><span class="pill" style="background:#22c55e"></span>Keyframes</div>
+                <div><span class="pill" style="background:#60a5fa"></span>Handles</div>
+      <div><span class="pill" style="background:#ef4444"></span>Locked endpoints</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+(() => {
+  "use strict";
+
+  const EPS = 1e-9;
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const v2 = (x, y) => ({ x, y });
+        const add = (a, b) => v2(a.x + b.x, a.y + b.y);
+        const sub = (a, b) => v2(a.x - b.x, a.y - b.y);
+        const mul = (a, s) => v2(a.x * s, a.y * s);
+        const len = (a) => Math.hypot(a.x, a.y);
+
+        function bezierPoint(P0, P1, P2, P3, t) {
+            const u = 1 - t;
+            return v2(
+      u*u*u*P0.x + 3*u*u*t*P1.x + 3*u*t*t*P2.x + t*t*t*P3.x,
+      u*u*u*P0.y + 3*u*u*t*P1.y + 3*u*t*t*P2.y + t*t*t*P3.y
+            );
+        }
+
+        function solveTforX(xTarget, P0, P1, P2, P3) {
+            const x0 = P0.x, x3 = P3.x;
+    if (Math.abs(x3 - x0) < EPS) return 0;
+            let lo = 0, hi = 1;
+            let t = clamp((xTarget - x0) / (x3 - x0), 0, 1);
+            function xAt(t) { return bezierPoint(P0, P1, P2, P3, t).x; }
+            function dxdt(t) {
+                const u = 1 - t;
+      return 3 * (mul(sub(P1, P0), u*u).x + mul(sub(P2, P1), 2*u*t).x + mul(sub(P3, P2), t*t).x);
+            }
+            for (let i = 0; i < 40; i++) {
+                const x = xAt(t);
+                if (Math.abs(x - xTarget) < 1e-6) break;
+                if (x < xTarget) lo = t; else hi = t;
+                t = 0.5 * (lo + hi);
+            }
+            for (let i = 0; i < 8; i++) {
+                const x = xAt(t);
+                const d = dxdt(t);
+      if (Math.abs(d) < EPS) break;
+                const step = (x - xTarget) / d;
+                t = clamp(t - step, 0, 1);
+                if (Math.abs(step) < 1e-6) break;
+            }
+            return t;
+        }
+
+        class BezierKey {
+            constructor(x, y) {
+                this.key = v2(x, y);
+                this.left = v2(x - 0.333, y);
+                this.right = v2(x + 0.333, y);
+      this.autoHandleType = "FREE";
+            }
+        }
+
+  function computeAutoClampedHandles(keys, autoSmoothing, extrapolationConstant) {
+            const n = keys.length;
+            if (n <= 1) return;
+            for (let i = 1; i < n; i++) {
+      if (!(keys[i].key.x > keys[i-1].key.x)) throw new Error("X must be strictly increasing.");
+            }
+            const threshold = 0.001;
+            for (let i = 0; i < n; i++) {
+                const bezk = keys[i];
+      const prev = i > 0 ? keys[i-1] : null;
+      const next = i < n-1 ? keys[i+1] : null;
+                bezk.left.x = Math.min(bezk.left.x, bezk.key.x - threshold);
+                bezk.right.x = Math.max(bezk.right.x, bezk.key.x + threshold);
+                const p2 = v2(bezk.key.x, bezk.key.y);
+                let p1, p3;
+      if (!prev) { if (!next) continue; p3 = next.key; p1 = v2(2*p2.x - p3.x, 2*p2.y - p3.y); } else { p1 = prev.key; }
+      if (!next) { p3 = v2(2*p2.x - p1.x, 2*p2.y - p1.y); } else { p3 = next.key; }
+      const dvecA = sub(p2, p1), dvecB = sub(p3, p2);
+      let lenA = dvecA.x !== 0 ? dvecA.x : 1.0;
+      let lenB = dvecB.x !== 0 ? dvecB.x : 1.0;
+      const tvec = add(mul(dvecB, 1/lenB), mul(dvecA, 1/lenA));
+      let lengthFactor = autoSmoothing ? 6.0 / 2.5614 : tvec.x;
+                lengthFactor *= 2.5614;
+      if (lengthFactor === 0) continue;
+      if (!autoSmoothing) { lenA = Math.min(lenA, 5*lenB); lenB = Math.min(lenB, 5*lenA); }
+      let leftViolate = false, rightViolate = false;
+      {
+        bezk.left = sub(p2, mul(tvec, lenA / lengthFactor));
+                    if (prev && next) {
+          const yd1 = prev.key.y - bezk.key.y, yd2 = next.key.y - bezk.key.y;
+          if ((yd1 <= 0 && yd2 <= 0) || (yd1 >= 0 && yd2 >= 0)) {
+            bezk.left.y = bezk.key.y; bezk.autoHandleType = "LOCKED";
+                        } else {
+            if (yd1 <= 0) { if (prev.key.y > bezk.left.y) { bezk.left.y = prev.key.y; leftViolate = true; } }
+            else { if (prev.key.y < bezk.left.y) { bezk.left.y = prev.key.y; leftViolate = true; } }
+          }
+        }
+      }
+      {
+        bezk.right = add(p2, mul(tvec, lenB / lengthFactor));
+                    if (prev && next) {
+          const yd1 = prev.key.y - bezk.key.y, yd2 = next.key.y - bezk.key.y;
+          if ((yd1 <= 0 && yd2 <= 0) || (yd1 >= 0 && yd2 >= 0)) {
+            bezk.right.y = bezk.key.y; bezk.autoHandleType = "LOCKED";
+                        } else {
+            if (yd1 <= 0) { if (next.key.y < bezk.right.y) { bezk.right.y = next.key.y; rightViolate = true; } }
+            else { if (next.key.y > bezk.right.y) { bezk.right.y = next.key.y; rightViolate = true; } }
+          }
+        }
+      }
+                if (leftViolate || rightViolate) {
+        const h1x = bezk.left.x - p2.x, h2x = p2.x - bezk.right.x;
+                    if (Math.abs(h1x) >= 1e-12 && Math.abs(h2x) >= 1e-12) {
+          if (leftViolate) bezk.right.y = p2.y + ((p2.y - bezk.left.y) / h1x) * h2x;
+          else bezk.left.y = p2.y + ((p2.y - bezk.right.y) / h2x) * h1x;
+        }
+      }
+                bezk.left.x = Math.min(bezk.left.x, bezk.key.x - threshold);
+                bezk.right.x = Math.max(bezk.right.x, bezk.key.x + threshold);
+            }
+            if (extrapolationConstant) {
+      const first = keys[0], last = keys[n-1];
+      first.autoHandleType = "LOCKED"; last.autoHandleType = "LOCKED";
+                first.left.y = first.key.y; first.right.y = first.key.y;
+                last.left.y = last.key.y; last.right.y = last.key.y;
+            }
+        }
+
+        function evaluateCurve(keys, xs) {
+            const ys = new Array(xs.length);
+            const xFirst = keys[0].key.x, yFirst = keys[0].key.y;
+    const xLast = keys[keys.length-1].key.x, yLast = keys[keys.length-1].key.y;
+            const segs = [];
+            for (let i = 0; i < keys.length - 1; i++) {
+      const a = keys[i], b = keys[i+1];
+                segs.push([a.key, a.right, b.left, b.key]);
+            }
+            let j = 0;
+            for (let k = 0; k < xs.length; k++) {
+                const x = xs[k];
+                if (x <= xFirst) { ys[k] = yFirst; continue; }
+                if (x >= xLast) { ys[k] = yLast; continue; }
+                while (j < segs.length && x > segs[j][3].x) j++;
+      if (j >= segs.length) { ys[k] = segs[segs.length-1][3].y; continue; }
+                const [P0, P1, P2, P3] = segs[j];
+      if (Math.abs(P3.x - P0.x) < EPS) { ys[k] = P0.y; continue; }
+                const t = solveTforX(x, P0, P1, P2, P3);
+                ys[k] = bezierPoint(P0, P1, P2, P3, t).y;
+            }
+            return ys;
+        }
+
+        const canvas = document.getElementById("c");
+        const ctx = canvas.getContext("2d");
+
+        function fitCanvas() {
+            const r = canvas.getBoundingClientRect();
+            canvas.width = Math.floor(r.width * devicePixelRatio);
+            canvas.height = Math.floor(r.height * devicePixelRatio);
+            ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+        }
+  new ResizeObserver(() => { fitCanvas(); draw(); }).observe(canvas);
+
+        const state = {
+            keys: [],
+            selected: -1,
+            dragging: false,
+            dragOffset: v2(0, 0),
+    solved: false,
+    view: { pad: 48, xMin: 0, xMax: 100, yMin: -1, yMax: 1 },
+  };
+
+  function makeDefaultKeys() {
+    return [
+                new BezierKey(0, 0.0),
+      new BezierKey(10, 0.0),
+      new BezierKey(20, 0.85),
+      new BezierKey(35, 0.85),
+      new BezierKey(50, -0.3),
+      new BezierKey(65, 0.55),
+      new BezierKey(80, 0.55),
+      new BezierKey(100, 0.0),
+    ];
+  }
+
+  function setLinearHandles(keys) {
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      const prev = i > 0 ? keys[i-1] : null;
+      const next = i < keys.length - 1 ? keys[i+1] : null;
+      k.autoHandleType = "FREE";
+      if (prev) {
+        const dx = k.key.x - prev.key.x;
+        k.left = v2(k.key.x - dx / 3, k.key.y - (k.key.y - prev.key.y) / 3);
+      } else {
+        k.left = v2(k.key.x - 0.333, k.key.y);
+      }
+      if (next) {
+        const dx = next.key.x - k.key.x;
+        k.right = v2(k.key.x + dx / 3, k.key.y + (next.key.y - k.key.y) / 3);
+      } else {
+        k.right = v2(k.key.x + 0.333, k.key.y);
+      }
+    }
+  }
+
+  function updateStatusText() {
+    const el = document.getElementById("algoStatus");
+    if (state.solved) {
+      el.innerHTML = 'Showing <strong>interpolated</strong> Bézier handles with overshoot prevention.';
+    } else {
+      el.innerHTML = 'Showing <strong>linear interpolation</strong> — handles point toward adjacent keys.';
+    }
+  }
+
+  function resetKeys() {
+    state.keys = makeDefaultKeys();
+            state.selected = -1;
+    state.solved = false;
+    setLinearHandles(state.keys);
+    updateStatusText();
+            draw();
+        }
+
+        function randomizeKeys() {
+    const count = clamp(parseInt(document.getElementById("numRandCount").value, 10) || 6, 3, 20);
+    const keys = [];
+    for (let i = 0; i < count; i++) {
+      const t = i / (count - 1);
+      const x = Math.round(t * 100);
+      const y = (Math.random() * 2 - 1) * 0.9;
+      keys.push(new BezierKey(x, y));
+    }
+    for (let i = 1; i < keys.length; i++) {
+      if (keys[i].key.x <= keys[i-1].key.x) keys[i].key.x = keys[i-1].key.x + 1;
+    }
+    state.keys = keys;
+    state.selected = -1;
+    state.solved = false;
+    setLinearHandles(state.keys);
+    updateStatusText();
+            draw();
+        }
+
+        function worldToScreen(p) {
+            const { pad, xMin, xMax, yMin, yMax } = state.view;
+            const w = canvas.getBoundingClientRect().width;
+            const h = canvas.getBoundingClientRect().height;
+    return v2(
+      pad + (p.x - xMin) * (w - 2*pad) / Math.max(EPS, xMax - xMin),
+      h - pad - (p.y - yMin) * (h - 2*pad) / Math.max(EPS, yMax - yMin)
+    );
+        }
+
+        function screenToWorld(p) {
+            const { pad, xMin, xMax, yMin, yMax } = state.view;
+            const w = canvas.getBoundingClientRect().width;
+            const h = canvas.getBoundingClientRect().height;
+    return v2(
+      xMin + (p.x - pad) * (xMax - xMin) / Math.max(EPS, w - 2*pad),
+      yMin + (h - pad - p.y) * (yMax - yMin) / Math.max(EPS, h - 2*pad)
+    );
+        }
+
+        function autoView() {
+            const xs = state.keys.map(k => k.key.x);
+            const ys = state.keys.map(k => k.key.y);
+            const xMin = Math.min(...xs), xMax = Math.max(...xs);
+            const yMin = Math.min(...ys), yMax = Math.max(...ys);
+    const mx = Math.max(2, (xMax - xMin) * 0.06);
+    const my = Math.max(0.2, (yMax - yMin) * 0.25);
+    state.view.xMin = xMin - mx;
+    state.view.xMax = xMax + mx;
+    state.view.yMin = yMin - my;
+    state.view.yMax = yMax + my;
+  }
+
+  function niceStep(range, maxTicks) {
+    const rough = range / maxTicks;
+    const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+    const norm = rough / mag;
+    const nice = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+    return nice * mag;
+  }
+
+  function tickLabel(v, step) {
+    const decimals = Math.max(0, -Math.floor(Math.log10(step) - 0.001));
+    return v.toFixed(decimals);
+        }
+
+        function drawGrid() {
+            const w = canvas.getBoundingClientRect().width;
+            const h = canvas.getBoundingClientRect().height;
+    const pad = state.view.pad;
+    const { xMin, xMax, yMin, yMax } = state.view;
+            ctx.clearRect(0, 0, w, h);
+
+    const xStep = niceStep(xMax - xMin, 8);
+    const yStep = niceStep(yMax - yMin, 6);
+    const xStart = Math.ceil(xMin / xStep) * xStep;
+    const yStart = Math.ceil(yMin / yStep) * yStep;
+
+            ctx.strokeStyle = "#111827";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+    for (let v = xStart; v <= xMax; v += xStep) {
+      const sx = worldToScreen(v2(v, 0)).x;
+      ctx.moveTo(sx, pad); ctx.lineTo(sx, h - pad);
+    }
+    for (let v = yStart; v <= yMax; v += yStep) {
+      const sy = worldToScreen(v2(0, v)).y;
+      ctx.moveTo(pad, sy); ctx.lineTo(w - pad, sy);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = "#1f2937";
+    ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            const y0 = worldToScreen(v2(0, 0)).y;
+    if (y0 > pad && y0 < h - pad) { ctx.moveTo(pad, y0); ctx.lineTo(w - pad, y0); }
+    const x0 = worldToScreen(v2(0, 0)).x;
+    if (x0 > pad && x0 < w - pad) { ctx.moveTo(x0, pad); ctx.lineTo(x0, h - pad); }
+            ctx.stroke();
+
+    ctx.font = "11px system-ui, -apple-system, sans-serif";
+    ctx.fillStyle = "#64748b";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    for (let v = xStart; v <= xMax; v += xStep) {
+      ctx.fillText(tickLabel(v, xStep), worldToScreen(v2(v, 0)).x, h - pad + 6);
+    }
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let v = yStart; v <= yMax; v += yStep) {
+      ctx.fillText(tickLabel(v, yStep), pad - 6, worldToScreen(v2(0, v)).y);
+    }
+
+    ctx.strokeStyle = "#243042";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(pad, pad, w - 2*pad, h - 2*pad);
+        }
+
+        function draw() {
+            const extrapConst = document.getElementById("chkExtrapConst").checked;
+            const showHandles = document.getElementById("chkShowHandles").checked;
+            const showSamples = document.getElementById("chkShowSamples").checked;
+
+            autoView();
+    if (state.solved) {
+      for (const k of state.keys) k.autoHandleType = "FREE";
+      computeAutoClampedHandles(state.keys, true, extrapConst);
+    } else {
+      setLinearHandles(state.keys);
+    }
+            drawGrid();
+
+            const w = canvas.getBoundingClientRect().width;
+            const h = canvas.getBoundingClientRect().height;
+    const samples = 512;
+    const { xMin, xMax } = state.view;
+            const xs = Array.from({ length: samples }, (_, i) => xMin + (xMax - xMin) * i / (samples - 1));
+            const ys = evaluateCurve(state.keys, xs);
+
+            ctx.strokeStyle = "#8b5cf6";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < xs.length; i++) {
+                const p = worldToScreen(v2(xs[i], ys[i]));
+                if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+            }
+            ctx.stroke();
+
+            if (showSamples) {
+                ctx.fillStyle = "rgba(139,92,246,0.25)";
+                for (let i = 0; i < xs.length; i += Math.max(1, Math.floor(samples / 120))) {
+                    const p = worldToScreen(v2(xs[i], ys[i]));
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            for (let i = 0; i < state.keys.length; i++) {
+                const k = state.keys[i];
+                const pk = worldToScreen(k.key);
+                const pl = worldToScreen(k.left);
+                const pr = worldToScreen(k.right);
+      const locked = k.autoHandleType === "LOCKED";
+
+                if (showHandles) {
+                    ctx.strokeStyle = locked ? "rgba(239,68,68,0.75)" : "rgba(96,165,250,0.7)";
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(pl.x, pl.y); ctx.lineTo(pk.x, pk.y); ctx.lineTo(pr.x, pr.y);
+                    ctx.stroke();
+                    ctx.fillStyle = locked ? "#ef4444" : "#60a5fa";
+                    ctx.beginPath(); ctx.arc(pl.x, pl.y, 4, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(pr.x, pr.y, 4, 0, Math.PI * 2); ctx.fill();
+                }
+
+                ctx.fillStyle = "#22c55e";
+      const s = i === state.selected ? 9 : 7;
+      ctx.fillRect(pk.x - s/2, pk.y - s/2, s, s);
+                if (i === state.selected) {
+                    ctx.strokeStyle = "#eab308";
+                    ctx.lineWidth = 2;
+        ctx.strokeRect(pk.x - s/2 - 1, pk.y - s/2 - 1, s + 2, s + 2);
+                }
+            }
+
+            ctx.strokeStyle = "#243042";
+            ctx.lineWidth = 1;
+    ctx.strokeRect(state.view.pad, state.view.pad, w - 2*state.view.pad, h - 2*state.view.pad);
+        }
+
+        function hitTestKeys(screenPt) {
+    let best = -1, bestD = 1e9;
+            for (let i = 0; i < state.keys.length; i++) {
+                const pk = worldToScreen(state.keys[i].key);
+                const d = Math.hypot(pk.x - screenPt.x, pk.y - screenPt.y);
+      if (d < 16 && d < bestD) { bestD = d; best = i; }
+            }
+            return best;
+        }
+
+        function enforceStrictX(i) {
+            const k = state.keys[i];
+    if (i > 0) k.key.x = Math.max(k.key.x, state.keys[i-1].key.x + 0.001);
+    if (i < state.keys.length - 1) k.key.x = Math.min(k.key.x, state.keys[i+1].key.x - 0.001);
+        }
+
+        canvas.addEventListener("pointerdown", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const p = v2(e.clientX - rect.left, e.clientY - rect.top);
+            const idx = hitTestKeys(p);
+            state.selected = idx;
+            if (idx !== -1) {
+                state.dragging = true;
+      state.dragOffset = sub(state.keys[idx].key, screenToWorld(p));
+                canvas.setPointerCapture(e.pointerId);
+            }
+            draw();
+        });
+
+        canvas.addEventListener("pointermove", (e) => {
+            if (!state.dragging || state.selected === -1) return;
+            const rect = canvas.getBoundingClientRect();
+    const world = add(screenToWorld(v2(e.clientX - rect.left, e.clientY - rect.top)), state.dragOffset);
+    state.keys[state.selected].key.x = world.x;
+    state.keys[state.selected].key.y = world.y;
+            enforceStrictX(state.selected);
+            draw();
+        });
+
+        canvas.addEventListener("pointerup", (e) => {
+            state.dragging = false;
+            canvas.releasePointerCapture(e.pointerId);
+        });
+
+        function addKey() {
+            const xs = state.keys.map(k => k.key.x);
+    let x = Math.max(...xs) + 10, y = 0;
+            if (state.selected >= 0 && state.selected < state.keys.length - 1) {
+      const a = state.keys[state.selected].key, b = state.keys[state.selected + 1].key;
+      x = 0.5 * (a.x + b.x); y = 0.5 * (a.y + b.y);
+            } else if (state.keys.length >= 2) {
+      const a = state.keys[state.keys.length-2].key, b = state.keys[state.keys.length-1].key;
+      x = b.x + (b.x - a.x); y = b.y;
+            }
+            const nk = new BezierKey(x, y);
+            state.keys.push(nk);
+    state.keys.sort((a, b) => a.key.x - b.key.x);
+            state.selected = state.keys.indexOf(nk);
+            draw();
+        }
+
+        function deleteSelected() {
+    if (state.selected === -1 || state.keys.length <= 2) return;
+            state.keys.splice(state.selected, 1);
+            state.selected = Math.min(state.selected, state.keys.length - 1);
+            draw();
+        }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { state.selected = -1; draw(); }
+    if (e.key === "Delete") deleteSelected();
+    if (e.key.toLowerCase() === "a") addKey();
+    if (e.key.toLowerCase() === "r") randomizeKeys();
+  });
+
+  document.getElementById("btnReset").addEventListener("click", resetKeys);
+  document.getElementById("btnAdd").addEventListener("click", addKey);
+  document.getElementById("btnDelete").addEventListener("click", deleteSelected);
+  document.getElementById("btnRandom").addEventListener("click", randomizeKeys);
+  document.getElementById("btnRun").addEventListener("click", () => {
+    state.solved = true;
+    updateStatusText();
+    draw();
+  });
+  document.getElementById("btnLinear").addEventListener("click", () => {
+    state.solved = false;
+    updateStatusText();
+                draw();
+  });
+  document.getElementById("chkExtrapConst").addEventListener("change", draw);
+  document.getElementById("chkShowHandles").addEventListener("change", draw);
+  document.getElementById("chkShowSamples").addEventListener("change", draw);
+
+        fitCanvas();
+        resetKeys();
+})();
+    </script>
+</body>
+</html>

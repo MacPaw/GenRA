@@ -1,0 +1,10 @@
+{
+  "prompt": "The blob jumps up surprised. Then it looks on the hourglass to his top left, while the hourglass appears and starts rotating in 180 degrees steps with slight easing and pauses between steps. While the hourglass is spinning, the blob slighly and slowly floats in the air as if it's breathing or hovering. During the spinning, the blob also blinks its eyes three times. In the end, the hourglass disappears and the blob returns to the initial position, essentially looping the animation. The animation starts with the hourglass not visible.",
+  "examples": ["hourglass_eney", "bounce", "look_around", "idle_blink"],
+  "notes": "",
+  "comment": "",
+  "refined": false,
+  "incremental_generation": true,
+  "first_try": false,
+  "no_examples": false
+}

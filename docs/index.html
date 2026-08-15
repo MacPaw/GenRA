@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GenRA: End-to-end Framework for LLM-Driven Animation of Rigged 3D Models</title>
+  <meta name="description" content="GenRA: End-to-end Framework for LLM-Driven Animation of Rigged 3D Models">
+
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <link rel="stylesheet" href="static/css/style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<section class="hero is-light">
+  <div class="hero-body">
+    <div class="container is-max-desktop has-text-centered">
+      <h1 class="title is-1 publication-title">GenRA: End-to-end Framework for LLM-Driven Animation of Rigged 3D Models</h1>
+      <!-- <h2 class="subtitle is-4 publication-subtitle">End-to-end Framework for Text-Driven Skeletal Animation via Keyframe Sampling and Bézier Interpolation</h2> -->
+
+      <div class="author-block">
+        <span class="author"><a href="https://orcid.org/0009-0001-4766-9954" target="_blank">Andrii Yaroshevych <i class="ai ai-orcid"></i></a><sup>1</sup></span>,
+        <span class="author"><a href="https://orcid.org/0009-0001-1867-8595" target="_blank">Pavlo Kryven <i class="ai ai-orcid"></i></a><sup>1</sup></span>,
+        <span class="author"><a href="https://orcid.org/0009-0003-7941-5929" target="_blank">Mariya Hirna <i class="ai ai-orcid"></i></a><sup>1</sup></span>,
+        <span class="author"><a href="https://orcid.org/0000-0003-0730-494X" target="_blank">Maksym Shamrai <i class="ai ai-orcid"></i></a><sup>1</sup></span>
+      </div>
+      <div class="institution-block">
+        <span><sup>1</sup> MacPaw AI & Research</span>
+      </div>
+
+      <div class="buttons is-centered" style="margin-top:1.2rem;">
+        <a class="button is-dark is-rounded" href="#" disabled>
+          <span class="icon"><i class="ai ai-arxiv"></i></span><span>arXiv</span>
+        </a>
+        <a class="button is-dark is-rounded" href="https://github.com/MacPaw/GenRA" target="_blank" rel="noopener">
+          <span class="icon"><i class="fab fa-github"></i></span><span>Code</span>
+        </a>
+        <a class="button is-dark is-rounded" href="https://huggingface.co/datasets/macpaw-research/GenRA-human-eval" target="_blank" rel="noopener">
+          <span class="icon" aria-hidden="true">🤗</span><span>Data</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TEASER ============ -->
+<section class="hero teaser-section">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="teaser-box">
+        <img src="static/images/pipeline.png" alt="Pipeline overview" class="teaser-image" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ABSTRACT ============ -->
+<section class="section" id="abstract">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Abstract</h2>
+    <div class="content has-text-justified">
+      <p>
+        Animating arbitrary rigged 3D assets remains labor-intensive, while existing generative methods rarely
+        combine broad asset support, fine-grained language control, iterative editing, and preservation of
+        production assets. We present GenRA, an end-to-end framework for generating and refining skeletal animation
+        directly in user-provided assets. GenRA conditions a multimodal large language model on the rig hierarchy
+        and bind pose, multi-view renders, a natural-language instruction, and optional motion examples compactly
+        encoded through keyframe decimation. The model produces sparse, bind-relative joint keyframes that are
+        reconstructed into smooth animation curves and authored back into the original asset without modifying its
+        geometry, skinning, or rig hierarchy. GenRA requires no task-specific training or retargeting and supports
+        zero- and multi-shot generation together with localized, compositional, temporal, and quantitative
+        language-based refinement. In 1,080 blind judgments across 40 diverse assets, GenRA achieves a 74.5%
+        tie-aware preference rate over Puppeteer and is preferred in every evaluated category, while reducing median
+        generation time by 83% and cost by 84%.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ METHOD ============ -->
+<section class="section" id="method">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Method</h2>
+
+    <!-- Pipeline Diagram -->
+    <div class="pipeline-container" id="pipeline">
+      <div class="pipeline-stage" data-stage="input" role="button" tabindex="0" aria-label="Input stage" aria-expanded="false">
+        <div class="stage-icon"><i class="fas fa-file-import"></i></div>
+        <div class="stage-label">Input & Processing</div>
+        <div class="stage-click-indicator" aria-hidden="true"><i class="fas fa-chevron-down"></i></div>
+      </div>
+      <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+      <div class="pipeline-stage" data-stage="keyframe-sampling" role="button" tabindex="0" aria-label="Keyframe Sampling stage" aria-expanded="false">
+        <div class="stage-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="stage-label">Keyframe Sampling</div>
+        <div class="stage-click-indicator" aria-hidden="true"><i class="fas fa-chevron-down"></i></div>
+      </div>
+      <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+      <div class="pipeline-stage" data-stage="llm-generation" role="button" tabindex="0" aria-label="LLM Generation stage" aria-expanded="false">
+        <div class="stage-icon"><i class="fas fa-hexagon-nodes"></i></div>
+        <div class="stage-label">LLM Generation</div>
+        <div class="stage-click-indicator" aria-hidden="true"><i class="fas fa-chevron-down"></i></div>
+      </div>
+      <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+      <div class="pipeline-stage" data-stage="interpolation" role="button" tabindex="0" aria-label="Interpolation stage" aria-expanded="false">
+        <div class="stage-icon"><i class="fas fa-bezier-curve"></i></div>
+        <div class="stage-label">Interpolation</div>
+        <div class="stage-click-indicator" aria-hidden="true"><i class="fas fa-chevron-down"></i></div>
+      </div>
+      <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+      <div class="pipeline-stage" data-stage="write-usd" role="button" tabindex="0" aria-label="Write to USD stage" aria-expanded="false">
+        <div class="stage-icon"><i class="fas fa-file-export"></i></div>
+        <div class="stage-label">Write to USD File</div>
+        <div class="stage-click-indicator" aria-hidden="true"><i class="fas fa-chevron-down"></i></div>
+      </div>
+    </div>
+
+    <!-- Stage Detail Panels -->
+    <div class="stage-panels">
+      <div class="stage-panels-empty" id="stage-panels-empty">
+        <i class="fas fa-arrow-up"></i>
+        <p><strong>Click on any stage above</strong> to reveal the corresponding method details.</p>
+      </div>
+
+      <!-- STAGE: Input -->
+      <div class="stage-panel" id="panel-input" hidden>
+        <h3 class="title is-4">Stage 1: Input & Processing</h3>
+            <div class="content">
+              <p>
+            The pipeline ingests a rigged 3D model in USD format and builds two structured
+            representations that the LLM can reason about: an <strong>Object JSON</strong> describing
+            the skeleton at rest, and an <strong>Animation JSON</strong> capturing motion as sparse keyframes.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-file-import"></i> Extracted Data</h5>
+        <div class="card-grid cols-3">
+          <div class="info-card">
+            <h6><i class="fas fa-project-diagram"></i> Skeleton Topology</h6>
+            <p>Joint names and parent-child relationships forming the rig hierarchy.</p>
+          </div>
+          <div class="info-card">
+            <h6><i class="fas fa-bone"></i> Bind Transforms</h6>
+            <p>The rest pose of each joint &mdash; position, rotation, and scale.</p>
+          </div>
+          <div class="info-card">
+            <h6><i class="fas fa-clock"></i> Time-Sampled Transforms</h6>
+            <p>Per-frame joint transformations decomposed into translation, Euler rotation, and scale.</p>
+          </div>
+        </div>
+
+        <div class="content">
+          <p>
+            Axis remapping normalizes all data to a <strong>Z-up, right-handed</strong> coordinate
+            system. The bind pose and hierarchy are serialized into <strong>Object JSON</strong> &mdash;
+            keys are hierarchical joint paths (<code>parent/child</code>) with
+            <code>p</code>, <code>r</code>, <code>s</code> (positions, rotations, and scales) values.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-code"></i> JSON Representations</h5>
+        <div class="json-pair">
+          <div class="json-pair-block">
+            <div class="json-pair-label">Object JSON <span class="prompt-tag">bind pose</span></div>
+              <pre class="code-block"><code>{
+  "root_j": {
+    "p": [0.0, 0.0, 0.0],
+    "r": [0.0, 0.0, 0.0],
+    "s": [1.0, 1.0, 1.0]
+  },
+  "root_j/body_main_j": {
+    "p": [0.25, 0.17, -2.54],
+    "r": [90.0, 0.0, 0.0],
+    "s": [1.0, 1.0, 1.0]
+  }
+}</code></pre>
+          </div>
+          <div class="json-pair-block">
+            <div class="json-pair-label">Animation JSON <span class="prompt-tag">keyframes</span></div>
+            <pre class="code-block"><code>{
+  "root_j/body_main_j": {
+    "0.00": {
+      "p": [0.25, 0.17, -2.54],
+      "r": [90.0, 0.0, 0.0]
+    },
+    "1.00": {
+      "p": [0.35, 0.17, -2.54],
+      "r": [45.0, 10.0, 0.0]
+    }
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-image"></i> Multi-View Rig Renders</h5>
+        <div class="content">
+          <p>
+            Optionally, the pipeline renders annotated views of the model showing the skeleton overlay
+            and coordinate axes. These images give the LLM spatial context about joint placement and orientation.
+          </p>
+        </div>
+        <div class="rig-render-row">
+          <figure>
+            <img src="static/images/rig_renders/stork_view_0.png" alt="Stork rig render, front view" />
+            <figcaption>Front view with coordinate axes</figcaption>
+          </figure>
+          <figure>
+            <img src="static/images/rig_renders/stork_view_2.png" alt="Stork rig render, back view" />
+            <figcaption>Rear view with coordinate axes</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <!-- STAGE: Keyframe Sampling -->
+      <div class="stage-panel" id="panel-keyframe-sampling" hidden>
+        <h3 class="title is-4">Stage 2: Keyframe Sampling</h3>
+        <div class="content">
+          <p>
+            A dense source motion $\mathcal{M}_i$ is reduced to a sparse representation
+            $\mathcal{K}_i = \mathsf{D}_{\varepsilon_0^2,\delta}(\mathcal{M}_i)$ using greedy
+            B&eacute;zier-based decimation. Each scalar component of every joint's translation, rotation, and scale
+            is processed independently.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-compress-arrows-alt"></i> Per-Axis Sampling</h5>
+        <div class="content">
+          <p>
+            For a scalar channel $x[n]$ where $n=0,\ldots,T_i-1$ represent the $n$-th frame of the motion $\mathcal{M}_i$, values are normalized by their maximum absolute magnitude to obtain
+            $\widehat{x}[n]$. The normalized points $\mathbf{p}_n=(n,\widehat{x}[n])$, initialize a dense piecewise-linear spline represented by degenerate cubic
+            B&eacute;zier segments. A min-heap algorithm iteratively removes the admissible knot with the smallest
+            removal cost.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-bezier-curve"></i> Bezier Fitting Cost</h5>
+        <div class="content">
+          <p>
+            For an interior candidate knot $k$ with neighboring knots $a$ and $b$, removing $k$ replaces the
+            affected spline portion with a cubic B&eacute;zier segment $\mathbf{B}_k$. Its endpoints and tangent
+            directions are fixed, while the signed handle lengths $\lambda_L$ and $\lambda_R$ are fitted to the
+            reference points by least squares.
+          </p>
+          <p>
+            Candidate removals are evaluated against fixed reference points uniformly sampled from the original dense curve,
+            with $R=10$ samples per segment. For a candidate spanning retained knots $a$ and $b$, let
+            $\{\mathbf{z}_\ell\}_{\ell\in\mathcal{L}_{ab}}$ denote the ordered reference points covered by that
+            candidate, where $\mathcal{L}_{ab}=\{0,\ldots,R(b-a)-1\}$ indexes the points spanning $a$ to $b$. 
+            The respective parametrization, handles and cost of segment $\mathbf{B}_k$ are computed as follows.
+          </p>
+          <p>
+            <strong>Chord-length parameterization:</strong>
+            $$u_\ell =
+            \frac{\sum_{s=0}^{\ell}\|\mathbf{z}_s-\mathbf{z}_{s-1}\|_2}
+            {\sum_{s=0}^{R(b-a)-1}\|\mathbf{z}_s-\mathbf{z}_{s-1}\|_2},
+            \qquad \ell\in\mathcal{L}_{ab},\quad u_\ell\in[0,1].$$
+          </p>
+          <p>
+            <strong>Handle fitting:</strong>
+            $$(\lambda_L^*,\lambda_R^*) =
+            \operatorname*{arg\,min}_{\lambda_L,\lambda_R}
+            \sum_{\ell\in\mathcal{L}_{ab}}
+            \left\|\mathbf{B}_k(u_\ell;\lambda_L,\lambda_R)-\mathbf{z}_\ell\right\|_2^2.$$
+          </p>
+          <p>
+            <strong>Removal cost:</strong>
+            $$c_k = \max_{\ell\in\mathcal{L}_{ab}}
+            \left\|\mathbf{B}_k(u_\ell;\lambda_L^*,\lambda_R^*)-\mathbf{z}_\ell\right\|_2^2.$$
+            Thus, the handle coefficients are fitted over all reference points in the affected interval, and
+            $c_k$ is the largest squared deviation over that same set.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-layer-group"></i> Depth-Adaptive Error Threshold</h5>
+        <div class="content">
+          <p>
+            For a channel belonging to joint $j$, removal continues while $c_k&lt;\varepsilon_j^2$, where
+            $$\varepsilon_j^2 = \varepsilon_0^2(1 + 0.1h_j),$$
+            and $h_j$ is the joint's depth in the hierarchy. The base squared tolerance is
+            $\varepsilon_0^2=0.01$ by default.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-object-group"></i> Clustering &amp; Post-Processing</h5>
+        <div class="content">
+          <p>
+            After scalar-channel decimation, retained frame indices are united within each joint and transform type.
+            Nearby indices are grouped into clusters whose temporal extent does not exceed $\delta$, and each cluster
+            is represented by its median frame; $\delta=2$ frames by default. Complete translation, rotation, or scale
+            vectors are then read from the original motion $\mathcal{M}_i$ at the retained frames and serialized in
+            $\mathcal{K}_i$; fitted B&eacute;zier handles are not serialized.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-play-circle"></i> Interactive Demo</h5>
+        <div class="demo-launcher" data-src="visualizations/sampling.html" data-title="Bézier Keyframe Sampling Visualizer">
+          <div class="demo-launcher-desktop">
+            <div class="demo-launcher-icon"><i class="fas fa-chart-line"></i></div>
+            <h6>Keyframe Decimation Visualizer</h6>
+            <p>Edit source points, adjust the error threshold, and scrub through each removal step.</p>
+            <button class="demo-launcher-btn" onclick="launchDemo(this)">
+              <i class="fas fa-expand"></i> Open Interactive Demo
+            </button>
+          </div>
+          <div class="demo-launcher-mobile">
+            <i class="fas fa-desktop"></i>
+            <p>This interactive demo requires a desktop browser.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAGE: LLM Generation -->
+      <div class="stage-panel" id="panel-llm-generation" hidden>
+        <h3 class="title is-4">Stage 3: LLM Generation</h3>
+        <div class="content">
+          <p>
+            The core generation step uses a Large Language Model to produce Animation JSON
+            from a structured prompt assembled from several components.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-layer-group"></i> Prompt Structure</h5>
+          <div class="prompt-structure">
+            <div class="prompt-block system-prompt">
+              <h6><i class="fas fa-cog"></i> System Prompt</h6>
+            <p>Task identity, Object &amp; Animation JSON format specs, coordinate system conventions
+               (Z-up, right-handed), keyframe authoring rules (hold keyframes, &lt;180&deg; rotation deltas),
+               hierarchical transformation notes.</p>
+            </div>
+            <div class="prompt-block user-prompt">
+            <h6><i class="fas fa-cube"></i> Object Description</h6>
+            <p>Natural language description of the 3D model together with the Object JSON bind pose.</p>
+            </div>
+            <div class="prompt-block user-prompt optional-prompt">
+            <h6><i class="fas fa-list-ol"></i> Few-Shot Examples <span class="prompt-tag">optional</span></h6>
+            <p>Example animations pairing short motion descriptions with Animation JSON of sampled keyframes.
+               Their presence and quantity directly improve generation quality.</p>
+            </div>
+            <div class="prompt-block user-prompt optional-prompt">
+            <h6><i class="fas fa-image"></i> Rig Render Images <span class="prompt-tag">optional</span></h6>
+            <p>Multi-view renders of the model with skeleton overlay and axis gizmo, providing spatial context.</p>
+            </div>
+            <div class="prompt-block user-prompt">
+              <h6><i class="fas fa-pen"></i> User Request</h6>
+              <p>The natural language animation description to generate.</p>
+            </div>
+            <div class="prompt-block output-prompt">
+            <h6><i class="fas fa-arrow-down"></i> Output: Animation JSON</h6>
+            <p>Keyframed joint transformations &mdash; joint paths map to timestamps with
+               <code>p</code>, <code>r</code>, <code>s</code> values.</p>
+            </div>
+          </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-tools"></i> Supporting Stages</h5>
+        <div class="card-grid cols-2">
+              <div class="info-card">
+                <h6><i class="fas fa-search"></i> Example Selection</h6>
+                <p>An LLM selects the most relevant few-shot examples from a library based on
+                   semantic similarity of motion descriptions, transformation ratios, and rig complexity.</p>
+              </div>
+              <div class="info-card">
+                <h6><i class="fas fa-broom"></i> Joint Name Cleanup</h6>
+                <p>Verbose joint names (e.g., <code>mixamorig_LeftShoulder</code>) are shortened
+                   by an LLM to reduce token usage while preserving anatomical meaning.</p>
+              </div>
+              <div class="info-card">
+                <h6><i class="fas fa-edit"></i> Motion Description</h6>
+            <p>User prompts are refined into clean, concise motion descriptions,
+               stripping meta-language like &ldquo;please generate&rdquo; or &ldquo;I want&rdquo;.</p>
+            </div>
+              <div class="info-card">
+                <h6><i class="fas fa-redo"></i> Iterative Refinement</h6>
+            <p>In REFINE mode the LLM receives an existing animation
+               and a modification request, enabling progressive improvement via chat.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAGE: Interpolation -->
+      <div class="stage-panel" id="panel-interpolation" hidden>
+        <h3 class="title is-4">Stage 4: Interpolation</h3>
+        <div class="content">
+          <p>
+            Generated keyframes are interpolated back into dense per-frame animation. Translations
+            and scales use cubic Bezier FCurve interpolation; rotations use quaternion SLERP.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-bezier-curve"></i> Bezier FCurve Interpolation (Translations &amp; Scales)</h5>
+        <div class="content">
+          <p>
+            Translation and scale are interpolated independently for each scalar channel $x$. Let $k_r$ be the frame
+            index of the $r$-th keyframe and $x_r=x[k_r]$ its value. At an interior keyframe, the tangent slope is
+            the arithmetic mean of the incoming and outgoing secant slopes:
+          </p>
+          <p>
+            $$m_r = \frac{1}{2}\left(
+            \frac{x_r-x_{r-1}}{k_r-k_{r-1}}+
+            \frac{x_{r+1}-x_r}{k_{r+1}-k_r}
+            \right).$$
+          </p>
+          <p>
+            The left and right B&eacute;zier handles are aligned with this tangent. Their frame-axis distances from
+            the keyframe are $(k_r-k_{r-1})/3$ and $(k_{r+1}-k_r)/3$, respectively. Treating the intervals separately
+            accommodates non-uniform keyframe spacing while preserving a common tangent slope.
+          </p>
+
+          <h6>Tangent Clamping</h6>
+          <p>
+            Handles are clamped to suppress overshoot:
+          </p>
+          <ul>
+            <li><strong>Local extremum:</strong> both handles are made horizontal.</li>
+            <li><strong>Monotonic interval:</strong> a handle that exceeds its neighboring keyframe value is clamped
+              to that value, and the opposite handle is adjusted to keep the handles collinear.</li>
+          </ul>
+          <p>
+            Boundary handles are horizontal, and values outside the first and last keyframes are held constant.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-sync-alt"></i> Quaternion SLERP (Rotations)</h5>
+        <div class="content">
+          <p>
+            Rotations are interpolated using Spherical Linear Interpolation:
+          </p>
+          <p>
+            $$\operatorname{slerp}(\mathbf{q}_r,\mathbf{q}_{r+1};\tau)
+            = \frac{\sin((1-\tau)\theta)}{\sin\theta}\mathbf{q}_r
+            + \frac{\sin(\tau\theta)}{\sin\theta}\mathbf{q}_{r+1},$$
+          </p>
+          <p>
+            where $\mathbf{q}_r$ and $\mathbf{q}_{r+1}$ are unit quaternions at consecutive keyframes,
+            $\tau=(n-k_r)/(k_{r+1}-k_r)$, and
+            $\theta=\arccos(\mathbf{q}_r\cdot\mathbf{q}_{r+1})$. If
+            $\mathbf{q}_r\cdot\mathbf{q}_{r+1}&lt;0$, one quaternion is negated to select the shorter arc.
+            Nearly coincident rotations use normalized linear interpolation for numerical stability.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-play-circle"></i> Interactive Demo</h5>
+        <div class="demo-launcher" data-src="visualizations/interpolation.html" data-title="Auto-Clamped Bézier F-Curve Visualizer">
+          <div class="demo-launcher-desktop">
+            <div class="demo-launcher-icon"><i class="fas fa-bezier-curve"></i></div>
+            <h6>Bézier Interpolation Visualizer</h6>
+            <p>Drag keys to edit, toggle handle visibility, and experiment with clamping modes.</p>
+            <button class="demo-launcher-btn" onclick="launchDemo(this)">
+              <i class="fas fa-expand"></i> Open Interactive Demo
+            </button>
+          </div>
+          <div class="demo-launcher-mobile">
+            <i class="fas fa-desktop"></i>
+            <p>This interactive demo requires a desktop browser.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAGE: Write to USD -->
+      <div class="stage-panel" id="panel-write-usd" hidden>
+        <h3 class="title is-4">Stage 5: Writing Back to USD</h3>
+        <div class="content">
+          <p>
+            The final stage writes the generated animation back to a USD file in a <strong>non-destructive</strong>
+            manner. The original scene data is fully preserved through a four-step process.
+          </p>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-tasks"></i> Write Process</h5>
+        <div class="card-grid cols-2">
+          <div class="info-card numbered-card">
+            <div class="card-number">1</div>
+            <h6>Scene Transfer</h6>
+            <p>The entire source file content is transferred to a new output file, preserving meshes,
+               materials, textures, skeleton bindings, and all other scene data.</p>
+          </div>
+          <div class="info-card numbered-card">
+            <div class="card-number">2</div>
+            <h6>Animation Creation</h6>
+            <p>A new animation primitive is created under the skeleton, and the skeleton&rsquo;s
+               animation source is updated to reference it.</p>
+          </div>
+          <div class="info-card numbered-card">
+            <div class="card-number">3</div>
+            <h6>Time-Sampled Transforms</h6>
+            <p>For each frame, per-joint translations, rotations (as quaternions), and scales are
+               written as time-sampled attributes on the animation primitive.</p>
+          </div>
+          <div class="info-card numbered-card">
+            <div class="card-number">4</div>
+            <h6>Metadata Embedding</h6>
+            <p>Animation JSON, motion description, model description, generation timestamp, and
+               library version are stored as custom data for reproducibility.</p>
+          </div>
+        </div>
+
+        <h5 class="stage-subtitle"><i class="fas fa-sitemap"></i> File Composition</h5>
+          <div class="usd-diagram">
+            <div class="usd-block source-block">
+            <div class="usd-block-header source-header">Source USD</div>
+              <ul>
+              <li><i class="fas fa-cube"></i> Meshes</li>
+                <li><i class="fas fa-palette"></i> Materials</li>
+                <li><i class="fas fa-image"></i> Textures</li>
+                <li><i class="fas fa-bone"></i> Skeleton</li>
+                <li><i class="fas fa-link"></i> Bindings</li>
+              </ul>
+            </div>
+            <div class="usd-arrow"><i class="fas fa-plus"></i></div>
+            <div class="usd-block anim-block">
+            <div class="usd-block-header anim-header">Generated</div>
+              <ul>
+                <li><i class="fas fa-key"></i> Keyframed transforms</li>
+                <li><i class="fas fa-info-circle"></i> Metadata</li>
+              </ul>
+            </div>
+          <div class="usd-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="usd-block output-block">
+            <div class="usd-block-header output-header">Output USD</div>
+              <ul>
+                <li><i class="fas fa-check"></i> All original data</li>
+                <li><i class="fas fa-plus-circle"></i> New animation</li>
+              <li><i class="fas fa-tag"></i> Provenance info</li>
+              </ul>
+            </div>
+        </div>
+      </div>
+    </div><!-- /stage-panels -->
+  </div>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section class="section is-light" id="results">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Results</h2>
+
+    <!-- Side-by-side comparisons -->
+    <h3 class="title is-4">Comparison with State of the Art</h3>
+    <p class="has-text-justified results-desc">
+      We compare against <a href="https://arxiv.org/abs/2508.10898" target="_blank" rel="noopener">Puppeteer</a>,
+      the closest state-of-the-art baseline that combines text conditioning, rig-based output, and support for diverse
+      object classes. We evaluate overall preference over prompt adherence and motion quality, since generic motion
+      metrics typically assume canonical skeletons, paired ground truth, or pretrained motion embeddings that do not
+      transfer reliably to this setting. The benchmark uses 40 rigged assets from Articulation-XL-2.0, spanning
+      mechanisms, characters, humanoids, plants, household objects, animals, and vehicles or robots. For each asset, we
+      generate 3 prompts and 3 stochastic trials per prompt, yielding 360 GenRA-Puppeteer pairs. Prompts are produced
+      once by a VLM-assisted procedure from the asset render, category label, and joint list, then used unchanged for
+      both methods; all results are zero-shot, with no exemplar animations provided.
+    </p>
+
+    <p class="has-text-justified results-desc">
+      We conduct a blind pairwise preference study with 27 raters. Each pair receives 3 independent judgments, for a
+      total of 1,080 ratings. We report the tie-aware preference score, where <em>A</em> and <em>B</em> denote ratings
+      favoring GenRA and Puppeteer, respectively, and <em>Tie</em> denotes ratings that prefer neither method.
+    </p>
+
+    <p class="human-eval-formula-title">Tie-aware preference rate:</p>
+    <p>$$\frac{A + 0.5 \cdot \mathrm{Tie}}{A + B + \mathrm{Tie}}$$</p>
+
+    <div class="content has-text-justified">
+      <p class="human-eval-table-title">By asset category:</p>
+      <div class="table-container">
+        <table class="table is-bordered is-hoverable is-fullwidth comparison-table results-rate-table">
+          <thead>
+            <tr>
+              <th>Group</th>
+              <th>#Models</th>
+              <th>A</th>
+              <th>B</th>
+              <th>Tie</th>
+              <th>GenRA preference rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>tool/mechanism</td>
+              <td>4</td>
+              <td>87</td>
+              <td>3</td>
+              <td>18</td>
+              <td>89%</td>
+            </tr>
+            <tr>
+              <td>humanoid/anthropomorphic</td>
+              <td>4</td>
+              <td>72</td>
+              <td>14</td>
+              <td>22</td>
+              <td>77%</td>
+            </tr>
+            <tr>
+              <td>vehicle/robot</td>
+              <td>6</td>
+              <td>116</td>
+              <td>29</td>
+              <td>17</td>
+              <td>77%</td>
+            </tr>
+            <tr>
+              <td>animal</td>
+              <td>7</td>
+              <td>123</td>
+              <td>24</td>
+              <td>42</td>
+              <td>76%</td>
+            </tr>
+            <tr>
+              <td>household item/furniture</td>
+              <td>3</td>
+              <td>51</td>
+              <td>16</td>
+              <td>14</td>
+              <td>72%</td>
+            </tr>
+            <tr>
+              <td>character/blob</td>
+              <td>13</td>
+              <td>220</td>
+              <td>69</td>
+              <td>62</td>
+              <td>72%</td>
+            </tr>
+            <tr>
+              <td>plant</td>
+              <td>3</td>
+              <td>37</td>
+              <td>21</td>
+              <td>23</td>
+              <td>60%</td>
+            </tr>
+            <tr class="overall-row">
+              <td>Overall</td>
+              <td>40</td>
+              <td>706</td>
+              <td>176</td>
+              <td>198</td>
+              <td>74.5%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="human-eval-table-title">By rig complexity:</p>
+      <div class="table-container">
+        <table class="table is-bordered is-hoverable is-fullwidth comparison-table results-rate-table">
+          <thead>
+            <tr>
+              <th>Group</th>
+              <th>#Models</th>
+              <th>A</th>
+              <th>B</th>
+              <th>Tie</th>
+              <th>GenRA preference rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>low complexity (&leq;5 joints)</td>
+              <td>16</td>
+              <td>287</td>
+              <td>59</td>
+              <td>86</td>
+              <td>76%</td>
+            </tr>
+            <tr>
+              <td>medium complexity (6-24 joints)</td>
+              <td>17</td>
+              <td>320</td>
+              <td>63</td>
+              <td>76</td>
+              <td>78%</td>
+            </tr>
+            <tr>
+              <td>high complexity (&geq;25 joints)</td>
+              <td>7</td>
+              <td>99</td>
+              <td>54</td>
+              <td>36</td>
+              <td>62%</td>
+            </tr>
+            <tr class="overall-row">
+              <td>Overall</td>
+              <td>40</td>
+              <td>706</td>
+              <td>176</td>
+              <td>198</td>
+              <td>74.5%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  
+
+    <p class="has-text-justified results-desc">
+      Overall, GenRA attains a 74.5% tie-aware preference rate and stays above the 50% indifference point in every
+      reported asset category and rig-complexity group. The largest gains appear on tools/mechanisms and low- to
+      medium-complexity rigs, where direct rig-level generation better preserves asset-specific articulation and prompt
+      semantics, and where prior-driven methods are less helped by existing dataset coverage. Puppeteer can sometimes
+      look more natural on highly organic motions, but its single-view optimization is more prone to motion drift,
+      unreliable joint recovery, and weaker prompt alignment. The gap narrows on plants and high-complexity rigs, where
+      direct generation must coordinate many coupled joints across deeper hierarchies.
+    </p>
+    <p class="has-text-justified results-desc">
+      Efficiency-wise, GenRA is also substantially faster and cheaper at inference time. Under realistic deployment settings, GenRA reduces 
+      median generation time by 83% and median processing cost by 84% relative to Puppeteer. Its median generation
+      time is 120 s per animation at a median cost of $0.09, using the
+      <a href="https://developers.openai.com/api/docs" target="_blank" rel="noopener">OpenAI API</a>
+      with <a href="https://developers.openai.com/api/docs/models/gpt-5.4" target="_blank" rel="noopener">gpt-5.4-medium</a>. 
+      By comparison, Puppeteer requires 690 s and $0.55 per animation in total,
+      combining a <a href="https://kling.ai/document-api/quickStart/userManual" target="_blank" rel="noopener">KlingAI API</a> video prior
+      generation step (60 s, $0.35) with a subsequent optimization stage on a
+      <a href="https://vast.ai/pricing/gpu/A100-SXM4" target="_blank" rel="noopener">Vast.ai 80 GB Nvidia A100 SXM4 instance</a> (630 s, $0.20).
+      This gap is consistent with the design of the two pipelines: GenRA generates directly on the target rig through a single
+      LLM-driven stack, whereas Puppeteer combines video-prior synthesis with downstream optimization.
+    </p>
+    <div class="table-container">
+      <table class="table is-bordered is-hoverable is-fullwidth comparison-table runtime-table">
+        <thead>
+          <tr>
+            <th>Approach</th>
+            <th>Generation stack</th>
+            <th>Median time / animation</th>
+            <th>Median cost / animation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>GenRA</td>
+            <td>
+              <a href="https://developers.openai.com/api/docs" target="_blank" rel="noopener">OpenAI API</a>
+              + <a href="https://developers.openai.com/api/docs/models/gpt-5.4" target="_blank" rel="noopener">gpt-5.4-medium</a>
+            </td>
+            <td>120 s</td>
+            <td>$0.09</td>
+          </tr>
+          <tr>
+            <td>Puppeteer</td>
+            <td>
+              <a href="https://kling.ai/document-api/quickStart/userManual" target="_blank" rel="noopener">KlingAI API</a>
+              video prior + <a href="https://vast.ai/pricing/gpu/A100-SXM4" target="_blank" rel="noopener">Vast.ai A100 SXM4</a> optimization
+            </td>
+            <td>690 s</td>
+            <td>$0.55</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="has-text-justified results-desc results-footnote">
+      Evaluation source files, including all compared pairs and collected ratings, can be found here:
+      <a href="https://huggingface.co/datasets/macpaw-research/GenRA-human-eval" class="results-placeholder-link" target="_blank" rel="noopener">Hugging Face dataset.</a>
+    </p>
+    <h3 class="title is-4" style="margin-top:3rem;">Animation Examples</h3>
+    <p class="has-text-justified results-desc">
+      Below we show representative qualitative results beyond the benchmark: side-by-side comparisons
+      against Puppeteer, iterative refinement examples, and few-shot or multi-shot generations with exemplar motions.
+    </p>
+    <h4 class="title is-5 animation-subsection-title">Side-by-Side Comparisons</h4>
+    <p class="has-text-justified results-desc" style="font-style:italic; color:var(--text-light); font-size:0.88rem;">
+      Note: visual differences in appearance between the two methods' videos are due to different rendering engines
+      and do not reflect animation quality.
+    </p>
+
+    <div class="comparison-grid" id="comparison-grid"></div>
+
+    <!-- Refinement examples -->
+    <h4 class="title is-5 animation-subsection-title" style="margin-top:3rem;">Iterative Refinement</h4>
+    <p class="has-text-justified results-desc">
+      GenRA's chat-based interface supports localized, compositional revisions: modifying a short interval,
+      adjusting a single limb, or specifying approximate angles and speeds &mdash; while leaving the rest of
+      the motion unchanged. Edits can be applied repeatedly, enabling progressive improvement or authoring of entirely new parts of the animation through
+      follow-up prompts.
+    </p>
+
+    <div id="refinement-workflows"></div>
+
+    <!-- Other examples -->
+    <h4 class="title is-5 animation-subsection-title" style="margin-top:3rem;">Additional Examples</h4>
+    <p class="has-text-justified results-desc">
+      Multi-shot generation on a proprietary character with animator-authored examples.
+      Few-shot conditioning substantially improves motion specificity and stylistic consistency. The system
+      is robust across prompt styles from short action descriptions to detailed motion directions; in
+      several cases, the results reach production-usable quality.
+    </p>
+
+    <div class="examples-gallery" id="examples-gallery"></div>
+  </div>
+</section>
+
+<!-- ============ COMPARISON TABLE ============ -->
+<section class="section is-light" id="comparison">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Related Work</h2>
+    <div class="content has-text-justified">
+      <p>
+        Existing motion-generation approaches broadly fall into several categories:
+        category-specific generators trained on domain-specific datasets, limited to particular character
+        classes such as humans or animals (MotionGPT3, AniMo, Sketch2Anim);
+        topology-conditioned diffusion models that operate on skeleton descriptors without preserving the
+        original rigged asset (AnyTop, Dragon);
+        video-prior approaches that may not preserve the rig and have limited control over the configuration and look of animation (Puppeteer, AniMimic, AnimaX);
+        and LLM-based methods that, while flexible, have been limited to rotation-only outputs or
+        canonical representations (Huang et al.).
+        In production pipelines, animation is authored for concrete rigged assets whose rig hierarchy,
+        skinning weights, and geometry must remain unchanged to maintain compatibility with existing scenes and
+        tools, while supporting iterative and fine-grained nature of refinement and editing of the animations. GenRA uniquely operates directly on user-provided rigged USD assets,
+        preserves all scene data (geometry, skinning, materials), supports all three transformation types
+        (translation, rotation, scale), and enables full iterative editing through a chat-based
+        workflow &mdash; making it suitable for direct integration into production DCC pipelines.
+      </p>
+    </div>
+    <div class="table-container">
+      <table class="table is-bordered is-hoverable is-fullwidth comparison-table related-work-table">
+        <thead>
+          <tr>
+            <th>Work</th>
+            <th>Method</th>
+            <th>Conditioning</th>
+            <th>Scope</th>
+            <th>Ex.</th>
+            <th>Dur.</th>
+            <th>G/R</th>
+            <th>Edit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://openaccess.thecvf.com/content/CVPR2025/papers/Wang_AniMo_Species-Aware_Model_for_Text-Driven_Animal_Motion_Generation_CVPR_2025_paper.pdf" target="_blank">AniMo</a></td>
+            <td>Motion transformer</td>
+            <td>Text + species</td>
+            <td>Animals</td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td><span class="cell-no"><i class="fas fa-times"></i></span> / <span class="cell-no"><i class="fas fa-times"></i></span></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2405.11286" target="_blank">Motion Avatar</a></td>
+            <td>LLM planner + learned models</td>
+            <td>Text</td>
+            <td>Humans, animals</td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td><span class="cell-no"><i class="fas fa-times"></i></span> / <span class="cell-no"><i class="fas fa-times"></i></span></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2506.24086" target="_blank">MotionGPT3</a></td>
+            <td>LLM + diffusion</td>
+            <td>Text or motion</td>
+            <td>Humans</td>
+            <td class="cell-partial">Part.</td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td><span class="cell-no"><i class="fas fa-times"></i></span> / <span class="cell-no"><i class="fas fa-times"></i></span></td>
+            <td class="cell-partial">Part.</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2504.19189" target="_blank">Sketch2Anim</a></td>
+            <td>Latent diffusion</td>
+            <td>Sketches + trajectories + text</td>
+            <td>Humans</td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td><span class="cell-no"><i class="fas fa-times"></i></span> / <span class="cell-no"><i class="fas fa-times"></i></span></td>
+            <td class="cell-yes"><i class="fas fa-check"></i></td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2502.17327" target="_blank">AnyTop</a></td>
+            <td>Topology-aware diffusion</td>
+            <td>Skeleton structure</td>
+            <td>Diverse skeletons</td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td><span class="cell-no"><i class="fas fa-times"></i></span> / <span class="cell-yes"><i class="fas fa-check"></i></span></td>
+            <td class="cell-partial">Part.</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2503.04257" target="_blank">Dragon</a></td>
+            <td>SiT diffusion</td>
+            <td>Text + skeleton</td>
+            <td>Diverse creatures</td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td class="cell-partial">Part.</td>
+            <td><span class="cell-no"><i class="fas fa-times"></i></span> / <span class="cell-yes"><i class="fas fa-check"></i></span></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2601.06378" target="_blank">RigMo</a></td>
+            <td>VAE + diffusion transformer</td>
+            <td>Mesh sequence</td>
+            <td>Diverse meshes</td>
+            <td class="cell-partial">Part.</td>
+            <td class="cell-partial">Part.</td>
+            <td><span class="cell-partial">Part.</span> / <span class="cell-no"><i class="fas fa-times"></i></span></td>
+            <td class="cell-partial">Part.</td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2508.10898" target="_blank">Puppeteer</a></td>
+            <td>Auto-rig + video opt.</td>
+            <td>Static mesh + video</td>
+            <td>Diverse meshes</td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td class="cell-partial">Part.</td>
+            <td><span class="cell-yes"><i class="fas fa-check"></i></span> / <span class="cell-no"><i class="fas fa-times"></i></span></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2512.14133" target="_blank">AniMimic</a></td>
+            <td>Auto-rig + video opt. + physics</td>
+            <td>Text + static mesh + video</td>
+            <td>Diverse meshes</td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td class="cell-partial">Part.</td>
+            <td><span class="cell-yes"><i class="fas fa-check"></i></span> / <span class="cell-no"><i class="fas fa-times"></i></span></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2506.19851" target="_blank">AnimaX</a></td>
+            <td>Video-pose diffusion</td>
+            <td>Text + rigged mesh + renders</td>
+            <td>Diverse meshes</td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+            <td><span class="cell-yes"><i class="fas fa-check"></i></span> / <span class="cell-yes"><i class="fas fa-check"></i></span></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+          </tr>
+          <tr>
+            <td><a href="https://arxiv.org/abs/2310.17838" target="_blank">Huang et al.</a></td>
+            <td>LLM</td>
+            <td>Text + rig + examples</td>
+            <td>Diverse skeletons</td>
+            <td class="cell-yes"><i class="fas fa-check"></i></td>
+            <td class="cell-partial">Part.</td>
+            <td><span class="cell-yes"><i class="fas fa-check"></i></span> / <span class="cell-yes"><i class="fas fa-check"></i></span></td>
+            <td class="cell-no"><i class="fas fa-times"></i></td>
+          </tr>
+          <tr>
+            <td><strong>GenRA</strong></td>
+            <td><strong>Multimodal LLM</strong></td>
+            <td><strong>Text + rig + renders</strong></td>
+            <td><strong>Diverse assets</strong></td>
+            <td class="cell-yes"><i class="fas fa-check"></i></td>
+            <td class="cell-yes"><i class="fas fa-check"></i></td>
+            <td><span class="cell-yes"><i class="fas fa-check"></i></span> / <span class="cell-yes"><i class="fas fa-check"></i></span></td>
+            <td class="cell-yes"><i class="fas fa-check"></i></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="results-footnote">
+        <i class="fas fa-check cell-yes"></i> supported;&nbsp;
+        <span class="cell-partial">Part.</span> partial or task-specific;&nbsp;
+        <i class="fas fa-times cell-no"></i> unsupported or not demonstrated.
+        Conditioning lists the inputs supplied to each method. <em>Ex.</em> denotes support for motion exemplars;
+        <em>Dur.</em> duration control; <em>G/R</em> preservation of input geometry and rig; and <em>Edit</em>
+        method-level iterative refinement.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BIBTEX ============ -->
+<section class="section" id="bibtex">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">BibTeX</h2>
+    <div class="bibtex-container">
+      <pre class="bibtex-block"><code>@inproceedings{yaroshevych2026genra,
+  title     = {GenRA: End-to-end Framework for LLM-Driven Animation of Rigged 3D Models},
+  author    = {Yaroshevych, Andrii and Kryven, Pavlo and Hirna, Mariya and Shamrai, Maksym},
+  booktitle = {Proceedings of the European Conference on Computer Vision (ECCV) Workshops},
+  year      = {2026}
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <p>
+        This page template is adapted from the
+        <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a>,
+        (which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page), which is licensed under
+        <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>.
+      </p>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ SCRIPTS ============ -->
+<script src="static/js/pipeline.js"></script>
+<script>
+function launchDemo(btn) {
+  var launcher = btn.closest('.demo-launcher');
+  var src = launcher.dataset.src;
+  var title = launcher.dataset.title || '';
+
+  var viewer = document.createElement('div');
+  viewer.className = 'embedded-viewer';
+
+  var iframe = document.createElement('iframe');
+  iframe.src = src;
+  iframe.title = title;
+  iframe.setAttribute('allowfullscreen', '');
+  viewer.appendChild(iframe);
+
+  var exitBtn = document.createElement('button');
+  exitBtn.className = 'fullscreen-btn';
+  exitBtn.title = 'Exit fullscreen';
+  exitBtn.innerHTML = '<i class="fas fa-compress"></i>';
+  viewer.appendChild(exitBtn);
+
+  launcher.parentNode.insertBefore(viewer, launcher.nextSibling);
+  launcher.style.display = 'none';
+
+  var rfs = viewer.requestFullscreen || viewer.webkitRequestFullscreen;
+  if (rfs) rfs.call(viewer);
+
+  exitBtn.addEventListener('click', function () {
+    var eFS = document.exitFullscreen || document.webkitExitFullscreen;
+    if (eFS) eFS.call(document);
+  });
+
+  function onFSChange() {
+    var active = document.fullscreenElement || document.webkitFullscreenElement;
+    if (active !== viewer) {
+      viewer.remove();
+      launcher.style.display = '';
+    }
+  }
+  document.addEventListener('fullscreenchange', onFSChange);
+  document.addEventListener('webkitfullscreenchange', onFSChange);
+}
+</script>
+</body>
+</html>

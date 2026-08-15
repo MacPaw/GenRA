@@ -1,0 +1,17 @@
+{
+    "workflow_name": "workflow_5",
+    "workflow_steps": [
+        {
+            "step_name": "step_0",
+            "step_prompt": "A windmill spins its sails steadily in place while its gear turns slowly, then the front door creaks open slightly and closes again. The animation should loop nicely."
+        },
+        {
+            "step_name": "step_1",
+            "step_prompt": "The sails of the windmill should start and stop spinning gradually. They also should spin in the opposite direction."
+        },
+        {
+            "step_name": "step_2",
+            "step_prompt": "The door should open fully instead of slightly in the beginning, stay open for 2 seconds, then close again before the windmill starts spinning."
+        }
+    ]
+}
